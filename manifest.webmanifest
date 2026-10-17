@@ -1,0 +1,15 @@
+{
+  "name": "Caja Árboles",
+  "short_name": "Caja Árboles",
+  "description": "Caja del vivero Árboles: ventas, cuentas entre Fran y Rocío y lista de precios.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "browser",
+  "background_color": "#F5F4F0",
+  "theme_color": "#1F7A72",
+  "lang": "es",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
