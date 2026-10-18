@@ -178,6 +178,14 @@ input[type=text].amtin{border:0;background:none;height:52px;padding:0;font-famil
 .pays button span{display:flex;flex-direction:column;align-items:flex-start;line-height:1.2;text-align:left}
 .pays button small{font-size:12px;font-weight:700;opacity:.75}
 .pays button i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.qrbtn{border:2px solid var(--accent);background:var(--accent-soft);color:var(--ink);border-radius:14px;min-height:52px;font-weight:800;font-size:16px;display:flex;align-items:center;justify-content:center;gap:10px}
+.qrbtn svg{width:22px;height:22px}
+.qr{position:fixed;inset:0;z-index:80;background:#FFFFFF;color:#1B1B1B;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:calc(20px + env(safe-area-inset-top, 0px)) 20px calc(20px + env(safe-area-inset-bottom, 0px));text-align:center}
+.qr img.code{width:min(78vw, 60vh, 420px);height:auto;image-rendering:pixelated}
+.qr .monto{font-family:var(--f-display);font-weight:800;font-size:44px;letter-spacing:-1px;line-height:1}
+.qr .alias{font-family:var(--f-display);font-weight:800;font-size:30px}
+.qr .sub{font-size:15px;color:#5E615C;font-weight:700}
+.qr button{border:2px solid #1B1B1B;background:#FFFFFF;color:#1B1B1B;border-radius:14px;min-height:50px;padding:0 24px;font-weight:800;font-size:16px}
 .pays button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:#FFFFFF}
 .pays button[aria-pressed="true"] i{background:#FFFFFF!important}
 .totalbox{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -335,6 +343,7 @@ img{max-width:100%}
             <div class="card">
               <div class="flabel" id="payLbl">¿Cómo pagó?</div>
               <div class="pays" role="group" aria-labelledby="payLbl" id="pays"></div>
+              <button type="button" class="qrbtn" id="qrBtn" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3M21 14v7h-4M14 21h.01"/></svg>Mostrar QR al cliente</button>
               <div class="flabel" id="dondeLbl">¿Dónde se vendió?</div>
               <div class="chips" role="group" aria-labelledby="dondeLbl" id="donde"></div>
               <div class="field"><label for="nota">Nota (opcional)</label><input type="text" id="nota" placeholder="Ej: seña del encargo de Laura"></div>
@@ -440,6 +449,15 @@ img{max-width:100%}
 <nav class="bottom" id="bottomNav" aria-label="Secciones"></nav>
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="version" id="version" aria-hidden="true"></div>
+<div class="qr" id="qr" hidden role="dialog" aria-modal="true" aria-label="QR para pagar">
+  <img src="logo.png" alt="" style="width:64px;height:78px;object-fit:contain">
+  <div class="monto num" id="qrMonto"></div>
+  <img class="code" id="qrImg" src="qr.png" alt="QR de Mercado Pago de Árboles">
+  <div class="sub" id="qrSinImg" hidden>Transferí al alias</div>
+  <div class="alias">arbolesr4</div>
+  <div class="sub">Titular: Francisco Corna</div>
+  <button type="button" id="qrCerrar">Listo, cerrar</button>
+</div>
 <div class="rev" id="rev" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="revTit" id="revBody"></div></div>
 
 <script type="module">
@@ -467,7 +485,7 @@ import { firebaseConfig } from "./firebase-config.js";
   const DLBL = Object.fromEntries(DONDES);
   const DCOL = {local:"#1F7A72", redes:"#4E8A3A", feria:"#D9732A"};
   // de quién es la plata de cada cosa: plantas → Fran, arte botánico → Rocío, otros → según el producto
-  const VERSION = "1.3";
+  const VERSION = "1.4";
   const ADMIN = "cornabalta3@gmail.com";
   const DUENOS = ["Fran","Rocío","Los dos"];
   // plantas → Fran, arte botánico → Rocío, otros → según el producto (por defecto, de los dos a medias)
@@ -587,7 +605,11 @@ import { firebaseConfig } from "./firebase-config.js";
 
   // ---------- vender ----------
   $("pays").innerHTML = MEDIOS.map(([k, l, c]) => `<button type="button" data-medio="${k}" aria-pressed="false"><i style="background:${c}"></i><span>${MCORTO[k]}${MSUB[k] ? `<small>${MSUB[k]}</small>` : ""}</span></button>`).join("");
-  const renderPays = () => document.querySelectorAll("[data-medio]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.medio === S.medio)));
+  const renderPays = () => { document.querySelectorAll("[data-medio]").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.medio === S.medio))); $("qrBtn").hidden = S.medio !== "transferencia"; };
+  $("qrImg").addEventListener("error", () => { $("qrImg").hidden = true; $("qrSinImg").hidden = false; });
+  $("qrBtn").addEventListener("click", () => { const T = aCobrar(); $("qrMonto").textContent = T > 0 ? money(T) : "";
+    const hay = $("qrImg").complete && $("qrImg").naturalWidth > 0; $("qrImg").hidden = !hay; $("qrSinImg").hidden = hay; $("qr").hidden = false; });
+  $("qrCerrar").addEventListener("click", () => { $("qr").hidden = true; });
   $("pays").addEventListener("click", e => { const b = e.target.closest("[data-medio]"); if (!b) return; S.medio = b.dataset.medio; renderPays(); updCobrar(); });
   const renderDonde = () => { $("donde").innerHTML = DONDES.map(([k, l]) => `<button type="button" class="chip small" data-donde="${k}" aria-pressed="${S.donde === k}">${l}</button>`).join(""); };
   $("donde").addEventListener("click", e => { const b = e.target.closest("[data-donde]"); if (!b) return; S.donde = b.dataset.donde; renderDonde(); });
