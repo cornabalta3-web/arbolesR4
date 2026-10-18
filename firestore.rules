@@ -1,7 +1,7 @@
 rules_version = '2';
 
 // Reglas de Caja Árboles: solo pueden entrar las cuentas de Google de la lista.
-// Reemplazá los tres mails de ejemplo por los reales antes de publicar las reglas en Firebase.
+// Copia de las reglas publicadas en Firebase (Firestore → Reglas).
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -9,9 +9,9 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.email_verified == true
         && request.auth.token.email in [
-          'mail-de-fran@gmail.com',
-          'mail-de-rocio@gmail.com',
-          'mail-de-balta@gmail.com'
+          'panchocorna@gmail.com',
+          'rociocupellino@gmail.com',
+          'cornabalta3@gmail.com'
         ];
     }
 
