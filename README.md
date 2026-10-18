@@ -2,7 +2,7 @@
 
 Caja del vivero **Árboles · Espacio Botánico** para Fran y Rocío: anotar ventas en segundos desde el celu o la compu, ver las cuentas entre los dos, el registro de ventas, el análisis del mes y la lista de precios.
 
-**Dirección de la app:** https://cornabalta3-web.github.io/arbolesr4/
+**Dirección de la app:** https://cornabalta3-web.github.io/arbolesR4/
 
 ## Cómo se usa (Fran y Rocío)
 
@@ -51,5 +51,17 @@ Datos en Firestore:
 | `usuarios/{id}` | Si cada cuenta de Google es de Fran o de Rocío. |
 
 Reglas de las cuentas entre Fran y Rocío: las plantas son de Fran, el arte botánico de Rocío y los otros según el producto. Las transferencias y Mercado Pago van a la cuenta de Fran; el efectivo lo tiene quien cobró.
+
+## Cómo se actualiza
+
+1. Fran o Rocío avisan qué falla o qué quieren cambiar, mejor con una captura.
+2. Balta lo pide en el mismo chat de Claude donde se armó la app, o en uno nuevo diciendo "Caja Árboles, repo arbolesR4". El archivo `CLAUDE.md` tiene todo el contexto.
+3. El cambio se sube a este repo y la página se actualiza sola en 1 o 2 minutos. Para verlo, alcanza con cerrar y abrir la app.
+
+Actualizar la app **no toca los datos**: ventas, precios y cuentas siguen en Firebase.
+
+Cosas que se hacen sin tocar el código:
+- **Sumar o sacar a alguien:** Firebase → Firestore → Reglas → editar la lista de mails → Publicar.
+- **Ver un dato puntual:** Firebase → Firestore → Datos. Para borrar una venta, mejor usar **Anular** en la app.
 
 **Respaldo:** en **Registro → Descargar Excel** se baja todo en un archivo para abrir con Excel o Google Sheets. Conviene hacerlo una vez por mes.
