@@ -29,6 +29,7 @@ App de caja del vivero **Árboles · Espacio Botánico** (Córdoba). La usan **F
 - Versión visible abajo a la derecha (`VERSION` en `index.html`): subirla en cada cambio.
 - Plantas iniciales cargadas una sola vez (`config/semilla`), todas con precio variable.
 - Colores: Turquesa (#1F7A72) sobre blanco cálido; fuentes Jost + Nunito Sans.
+- **Modo oscuro:** botón luna/sol arriba a la derecha; se guarda por dispositivo (`caja.tema`) y por defecto sigue al celu. Todo color va por variables CSS (`--fill`/`--on-fill` para los bloques oscuros); no usar colores fijos nuevos.
 
 ## Datos en Firestore
 - `dias/{AAAA-MM-DD}`: `{ fecha, ventas: { [id]: { ts, items:[{n,c,p,cat,de,pid?}], lista, total, medio, cobro, donde, nota, anulada?, prueba? } } }`
