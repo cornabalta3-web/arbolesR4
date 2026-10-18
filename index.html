@@ -94,6 +94,16 @@ input:focus{border-color:var(--ink);outline:none}
 @media (min-width:900px){.toast{bottom:28px}}
 .version{position:fixed;right:max(10px, env(safe-area-inset-right, 0px));bottom:calc(74px + env(safe-area-inset-bottom, 0px));z-index:15;font-size:11px;font-weight:700;color:var(--muted);opacity:.8;pointer-events:none}
 @media (min-width:900px){.version{bottom:10px}}
+.version.admin{pointer-events:auto;border:0;background:none;padding:6px 4px;cursor:pointer;font-family:inherit}
+.rev{position:fixed;inset:0;z-index:70;background:rgba(27,27,27,.45);display:flex;align-items:flex-end;justify-content:center}
+.rev .sheet{background:var(--surface);width:100%;max-width:520px;max-height:88vh;overflow:auto;border-radius:22px 22px 0 0;padding:20px max(18px, env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));display:flex;flex-direction:column;gap:14px}
+@media (min-width:900px){.rev{align-items:center}.rev .sheet{border-radius:22px}}
+.rev h2{font-size:20px}
+.rev .fila{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 0;border-top:1px solid var(--line);font-size:15px}
+.rev .fila:first-of-type{border-top:0}
+.switch{display:flex;align-items:center;gap:10px;font-weight:700}
+.switch input{width:22px;height:22px}
+.rev a{color:var(--accent);font-weight:800}
 .empty{text-align:center;color:var(--muted);padding:24px 8px}
 .empty strong{display:block;color:var(--ink);font-family:var(--f-display);font-size:20px;margin-bottom:4px}
 .mlink{border:0;background:none;color:var(--muted);text-decoration:underline;font-size:14px;padding:6px 0;text-align:left;align-self:flex-start}
@@ -414,11 +424,12 @@ img{max-width:100%}
 <nav class="bottom" id="bottomNav" aria-label="Secciones"></nav>
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="version" id="version" aria-hidden="true"></div>
+<div class="rev" id="rev" hidden><div class="sheet" role="dialog" aria-modal="true" aria-labelledby="revTit" id="revBody"></div></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
 import { getAuth, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-auth.js";
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, deleteDoc, getDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, collection, doc, setDoc, updateDoc, deleteField, deleteDoc, getDoc, onSnapshot, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 
 (() => {
@@ -440,7 +451,8 @@ import { firebaseConfig } from "./firebase-config.js";
   const DLBL = Object.fromEntries(DONDES);
   const DCOL = {local:"#1F7A72", redes:"#4E8A3A", feria:"#D9732A"};
   // de quién es la plata de cada cosa: plantas → Fran, arte botánico → Rocío, otros → según el producto
-  const VERSION = "1.1";
+  const VERSION = "1.2";
+  const ADMIN = "cornabalta3@gmail.com";
   const DUENOS = ["Fran","Rocío","Los dos"];
   // plantas → Fran, arte botánico → Rocío, otros → según el producto (por defecto, de los dos a medias)
   const dueno = (it) => it.cat === "Arte" ? "Rocío" : it.cat === "Planta" ? "Fran" : (DUENOS.includes(it.de) ? it.de : "Los dos");
@@ -501,6 +513,8 @@ import { firebaseConfig } from "./firebase-config.js";
     delProd(id) { return fire(deleteDoc(doc(this.db, "productos", id))); },
     async addCuenta(data) { const ref = doc(collection(this.db, "cuentas")); fire(setDoc(ref, data)); return ref.id; },
     async leerYo() { const s = await getDoc(doc(this.db, "usuarios", FB.user.uid)); return s.exists() ? s.data().nombre : null; },
+    borrarVenta(dia, id) { return fire(updateDoc(doc(this.db, "dias", dia), { ["ventas." + id]: deleteField() })); },
+    watchUsuarios(cb) { onSnapshot(collection(this.db, "usuarios"), s => cb(s.docs.map(d => ({ id: d.id, ...d.data() }))), () => {}); },
     async sembrar(lista) { // carga la lista inicial de plantas una sola vez (ids fijos: no duplica)
       const marca = doc(this.db, "config", "semilla");
       const s = await getDoc(marca); if (s.exists()) return;
@@ -529,7 +543,7 @@ import { firebaseConfig } from "./firebase-config.js";
   try { const t = localStorage.getItem("caja.tab"); if (t && TABS.some(x => x[0] === t)) S.tab = t; const y = localStorage.getItem("caja.yo"); if (PERSONAS.includes(y)) S.yo = y; } catch (e) {}
 
   const ventas = () => { const out = []; for (const [dia, b] of S.dias) { const vs = b.ventas || {}; for (const id in vs) { const v = vs[id]; out.push({ dia, id, ...v, medio: medioDe(v.medio), cobro: quienCobro(v) }); } } return out.sort((a, b) => (b.ts || 0) - (a.ts || 0)); };
-  const validas = (l) => l.filter(v => !v.anulada);
+  const validas = (l) => l.filter(v => !v.anulada && !v.prueba);
   const sum = (l) => l.reduce((s, v) => s + (v.total || 0), 0);
   const prodList = () => [...S.prods.entries()].map(([id, p]) => ({ id, ...p })).sort((a, b) => String(a.n).localeCompare(String(b.n), "es"));
   const vendidos = () => { const m = new Map(); for (const v of validas(ventas())) for (const it of v.items || []) if (it.n) { const k = norm(it.n); m.set(k, (m.get(k) || 0) + (it.c || 1)); } return m; };
@@ -552,7 +566,7 @@ import { firebaseConfig } from "./firebase-config.js";
     $("pick").hidden = !!S.yo;
     $("whoChip").innerHTML = S.yo ? `<button type="button" class="whochip" id="cambiarYo">Cobra: <b>${esc(S.yo)}</b> · cambiar</button>` : "";
   }
-  $("pick").addEventListener("click", e => { const b = e.target.closest("[data-yo]"); if (!b) return; S.yo = b.dataset.yo; try { localStorage.setItem("caja.yo", S.yo); } catch (er) {} if (DB.guardarYo) DB.guardarYo(S.yo); renderWho(); updCobrar(); });
+  $("pick").addEventListener("click", e => { const b = e.target.closest("[data-yo]"); if (!b) return; S.yo = b.dataset.yo; try { localStorage.setItem("caja.yo", S.yo); } catch (er) {} if (DB.guardarYo && !S.admin) DB.guardarYo(S.yo); renderWho(); updCobrar(); });
   $("whoChip").addEventListener("click", e => { if (!e.target.closest("#cambiarYo")) return; S.yo = S.yo === "Fran" ? "Rocío" : "Fran"; try { localStorage.setItem("caja.yo", S.yo); } catch (er) {} renderWho(); toast("Ahora cobra " + S.yo); updCobrar(); });
 
   // ---------- vender ----------
@@ -637,12 +651,13 @@ import { firebaseConfig } from "./firebase-config.js";
     const items = ls.map(l => { const it = { n: String(l.n).trim(), c: l.c, p: l.p, cat: l.cat }; it.de = dueno({ ...it, de: l.de }); if (l.pid) it.pid = l.pid; return it; });
     const L = items.reduce((s, it) => s + it.c * it.p, 0);
     const v = { ts: Date.now(), items, lista: L, total: S.cobrado > 0 ? S.cobrado : L, medio: S.medio, cobro: S.yo, donde: S.donde, nota: $("nota").value.trim() || null };
+    if (S.admin && S.prueba) v.prueba = true;
     const id = "v" + v.ts.toString(36) + Math.random().toString(36).slice(2, 6);
     const unicas = ls.filter(l => l.pid && l.unica).map(l => l.pid);
     $("cobrar").disabled = true;
     try { await DB.saveVenta(hoy(), id, v);
       for (const pid of unicas) { try { await DB.updateProd(pid, { vendida: true }); } catch (er) {} }
-      resetVenta(); toast("Venta guardada: " + money(v.total)); }
+      resetVenta(); toast((v.prueba ? "Venta de prueba guardada: " : "Venta guardada: ") + money(v.total)); }
     catch (er) { toast(errMsg(er)); updCobrar(); }
   });
   function renderHoy() {
@@ -668,7 +683,7 @@ import { firebaseConfig } from "./firebase-config.js";
     return ventas().filter(v => v.dia >= a && v.dia <= b && (!q || (v.items || []).some(it => norm(it.n || CL[it.cat]).includes(q)) || norm(v.nota).includes(q))); }
   function saleHTML(v) { const key = v.dia + "|" + v.id; const desc = (v.lista || listaDe(v)) - (v.total || 0);
     let h = `<div class="sale${v.anulada ? " void" : ""}"><span class="h num">${hora(v.ts)}</span><div><div class="it">${esc(itemsTxt(v))}</div>
-      <div class="meta"><span class="tag ${esc(v.medio)}">${esc(MLBL[v.medio])}</span><span>cobró ${esc(v.cobro)}</span>${v.donde && v.donde !== "local" ? `<span class="tag gris">${esc(DLBL[v.donde] || v.donde)}</span>` : ""}${desc > 0.5 ? `<span>· descuento ${money(desc)}</span>` : ""}${v.anulada ? '<span class="tag warn">Anulada</span>' : ""}${v.nota ? "<span>· " + esc(v.nota) + "</span>" : ""}</div>
+      <div class="meta"><span class="tag ${esc(v.medio)}">${esc(MLBL[v.medio])}</span><span>cobró ${esc(v.cobro)}</span>${v.donde && v.donde !== "local" ? `<span class="tag gris">${esc(DLBL[v.donde] || v.donde)}</span>` : ""}${desc > 0.5 ? `<span>· descuento ${money(desc)}</span>` : ""}${v.anulada ? '<span class="tag warn">Anulada</span>' : ""}${v.prueba ? '<span class="tag gris">Prueba</span>' : ""}${v.nota ? "<span>· " + esc(v.nota) + "</span>" : ""}</div>
       ${v.anulada ? `<button type="button" class="mlink" data-restore="${key}">Restaurar</button>` : `<button type="button" class="mlink" data-void="${key}">Anular</button>`}</div><b class="amt2 num">${money(v.total)}</b>`;
     if (S.confirming === key) h += `<div class="confirm">¿Anular esta venta de ${money(v.total)}? <button type="button" class="btn danger small" data-yes="${key}">Sí, anular</button><button type="button" class="btn soft small" data-no="1">No</button></div>`;
     return h + "</div>"; }
@@ -868,6 +883,41 @@ import { firebaseConfig } from "./firebase-config.js";
   }
   function setSync(st, txt) { document.querySelectorAll("[data-dot]").forEach(d => d.className = "dot " + st); document.querySelectorAll("[data-sync]").forEach(d => d.textContent = txt); }
   $("version").textContent = "v" + VERSION;
+  // ---------- modo revisión (solo Balta) ----------
+  S.admin = false; S.usuarios = []; S.borrarConfirm = false;
+  try { S.prueba = localStorage.getItem("caja.prueba") !== "no"; } catch (e) { S.prueba = true; }
+  function activarAdmin() {
+    S.admin = true; const vb = $("version");
+    const nuevo = document.createElement("button"); nuevo.type = "button"; nuevo.id = "version"; nuevo.className = "version admin"; nuevo.setAttribute("aria-label", "Abrir modo revisión");
+    vb.replaceWith(nuevo); pintarVersion(); nuevo.addEventListener("click", abrirRev);
+    DB.watchUsuarios(arr => { S.usuarios = arr; if (!$("rev").hidden) renderRev(); });
+  }
+  function pintarVersion() { $("version").textContent = "v" + VERSION + (S.admin && S.prueba ? " · prueba" : ""); }
+  const pruebas = () => ventas().filter(v => v.prueba);
+  function renderRev() {
+    const reales = ventas().filter(v => !v.prueba && !v.anulada); const pr = pruebas();
+    const ult = ventas().filter(v => !v.prueba)[0];
+    $("revBody").innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 id="revTit">Revisión · v${VERSION}</h2><button type="button" class="btn soft small" id="revCerrar">Cerrar</button></div>
+      <div class="hint">Solo lo ves vos (${esc(ADMIN)}).</div>
+      <label class="switch"><input type="checkbox" id="revPrueba" ${S.prueba ? "checked" : ""}> Modo prueba: mis ventas no cuentan en totales ni cuentas</label>
+      <div class="fila"><span>Cobrar como</span><span class="chips">${PERSONAS.map(p => `<button type="button" class="chip small" data-revyo="${p}" aria-pressed="${S.yo === p}">${p}</button>`).join("")}</span></div>
+      <div class="fila"><span>Ventas reales</span><b class="num">${reales.length} · ${money(sum(reales))}</b></div>
+      <div class="fila"><span>Última venta real</span><b>${ult ? esc(diaLargo(ult.dia)) + " " + hora(ult.ts) + " · " + esc(ult.cobro) : "—"}</b></div>
+      <div class="fila"><span>Productos en la lista</span><b class="num">${[...S.prods.values()].filter(p => !p.vendida).length}</b></div>
+      <div class="fila"><span>Ventas de prueba</span><span style="display:flex;gap:8px;align-items:center"><b class="num">${pr.length}</b>
+        ${pr.length ? (S.borrarConfirm ? `<button type="button" class="btn danger small" id="revBorrarSi">Sí, borrarlas</button>` : `<button type="button" class="btn line small" id="revBorrar">Borrar</button>`) : ""}</span></div>
+      <div class="eyebrow" style="margin-top:6px">Quién entró</div>
+      ${S.usuarios.length ? S.usuarios.map(u => `<div class="fila"><span>${esc(u.email || u.id)}</span><b>${esc(u.nombre || "—")}</b></div>`).join("") : `<div class="hint">Todavía nadie eligió su nombre.</div>`}
+      <div class="fila"><a href="https://github.com/cornabalta3-web/arbolesR4" target="_blank" rel="noopener">Repo en GitHub</a><a href="https://console.firebase.google.com/project/arbolesr4-72a22/firestore" target="_blank" rel="noopener">Datos en Firebase</a></div>`;
+  }
+  function abrirRev() { S.borrarConfirm = false; renderRev(); $("rev").hidden = false; }
+  $("rev").addEventListener("click", async e => {
+    if (e.target === $("rev") || e.target.closest("#revCerrar")) { $("rev").hidden = true; return; }
+    const yo = e.target.closest("[data-revyo]"); if (yo) { S.yo = yo.dataset.revyo; try { localStorage.setItem("caja.yo", S.yo); } catch (er) {} renderWho(); updCobrar(); renderRev(); return; }
+    if (e.target.closest("#revBorrar")) { S.borrarConfirm = true; renderRev(); return; }
+    if (e.target.closest("#revBorrarSi")) { for (const v of pruebas()) await DB.borrarVenta(v.dia, v.id); S.borrarConfirm = false; toast("Ventas de prueba borradas"); renderRev(); }
+  });
+  $("rev").addEventListener("change", e => { if (e.target.id !== "revPrueba") return; S.prueba = e.target.checked; try { localStorage.setItem("caja.prueba", S.prueba ? "si" : "no"); } catch (er) {} pintarVersion(); });
   const fail = () => { setSync("off", "Sin conexión"); $("banner").hidden = false; $("banner").textContent = "Se cortó la conexión con el registro. Recargá la página."; };
 
   setRango("hoy"); renderNuevo(); renderDonde(); setTab(S.tab);
@@ -911,7 +961,7 @@ import { firebaseConfig } from "./firebase-config.js";
       prods: (m) => { S.prods = m; render(); },
       cuentas: (arr) => { S.cuentas = arr; render(); },
       err: errDb });
-    S.ready = true; render(true);
+    S.ready = true; if ((user.email || "").toLowerCase() === ADMIN) activarAdmin(); render(true);
     DB.sembrar([["rosario","Rosario"],["fitonia","Fitonia"],["peperomia","Peperomia"],["potus","Potus"],["ficus","Ficus"],["aromaticas","Aromáticas"],["suculentas","Suculentas"],["ala-de-angel","Ala de ángel"],["philodendron","Philodendron"]]).catch(() => {});
   });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
