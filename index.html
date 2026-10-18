@@ -92,6 +92,8 @@ input:focus{border-color:var(--ink);outline:none}
 .tag.warn{background:var(--red-soft);color:var(--red)} .tag.gris{background:var(--soft);color:var(--muted)}
 .toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(92px + env(safe-area-inset-bottom, 0px));background:var(--ink);color:#FFFFFF;padding:12px 18px;border-radius:14px;font-weight:700;z-index:30;max-width:calc(100% - 32px);text-align:center}
 @media (min-width:900px){.toast{bottom:28px}}
+.version{position:fixed;right:max(10px, env(safe-area-inset-right, 0px));bottom:calc(74px + env(safe-area-inset-bottom, 0px));z-index:15;font-size:11px;font-weight:700;color:var(--muted);opacity:.8;pointer-events:none}
+@media (min-width:900px){.version{bottom:10px}}
 .empty{text-align:center;color:var(--muted);padding:24px 8px}
 .empty strong{display:block;color:var(--ink);font-family:var(--f-display);font-size:20px;margin-bottom:4px}
 .mlink{border:0;background:none;color:var(--muted);text-decoration:underline;font-size:14px;padding:6px 0;text-align:left;align-self:flex-start}
@@ -411,6 +413,7 @@ img{max-width:100%}
 </div>
 <nav class="bottom" id="bottomNav" aria-label="Secciones"></nav>
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="version" id="version" aria-hidden="true"></div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
@@ -437,7 +440,11 @@ import { firebaseConfig } from "./firebase-config.js";
   const DLBL = Object.fromEntries(DONDES);
   const DCOL = {local:"#1F7A72", redes:"#4E8A3A", feria:"#D9732A"};
   // de quién es la plata de cada cosa: plantas → Fran, arte botánico → Rocío, otros → según el producto
-  const dueno = (it) => it.cat === "Arte" ? "Rocío" : it.cat === "Planta" ? "Fran" : (PERSONAS.includes(it.de) ? it.de : "Fran");
+  const VERSION = "1.1";
+  const DUENOS = ["Fran","Rocío","Los dos"];
+  // plantas → Fran, arte botánico → Rocío, otros → según el producto (por defecto, de los dos a medias)
+  const dueno = (it) => it.cat === "Arte" ? "Rocío" : it.cat === "Planta" ? "Fran" : (DUENOS.includes(it.de) ? it.de : "Los dos");
+  const parte = (it, p) => { const d = dueno(it); return d === p ? 1 : d === "Los dos" ? 0.5 : 0; };
   const quienCobro = (v) => PERSONAS.includes(v.cobro) ? v.cobro : "Fran";
   // las transferencias y MP van siempre a la cuenta de Fran; el efectivo, a la billetera de quien cobró
   const recibe = (v) => v.medio === "transferencia" ? "Fran" : quienCobro(v);
@@ -494,6 +501,12 @@ import { firebaseConfig } from "./firebase-config.js";
     delProd(id) { return fire(deleteDoc(doc(this.db, "productos", id))); },
     async addCuenta(data) { const ref = doc(collection(this.db, "cuentas")); fire(setDoc(ref, data)); return ref.id; },
     async leerYo() { const s = await getDoc(doc(this.db, "usuarios", FB.user.uid)); return s.exists() ? s.data().nombre : null; },
+    async sembrar(lista) { // carga la lista inicial de plantas una sola vez (ids fijos: no duplica)
+      const marca = doc(this.db, "config", "semilla");
+      const s = await getDoc(marca); if (s.exists()) return;
+      for (const [id, n] of lista) fire(setDoc(doc(this.db, "productos", "s-" + id), { n, p: null, cat: "Planta", de: null, unica: false, vendida: false, creado: Date.now() }, { merge: true }));
+      fire(setDoc(marca, { v: 1, ts: Date.now() }));
+    },
     guardarYo(nombre) { return fire(setDoc(doc(this.db, "usuarios", FB.user.uid), { nombre, email: FB.user.email || null }, { merge: true })); }
   };
 
@@ -512,7 +525,7 @@ import { firebaseConfig } from "./firebase-config.js";
 
   const nuevaLinea = () => ({ pid: null, n: "", c: 1, p: 0, cat: "Planta", de: null, unica: false });
   const S = { dias:new Map(), prods:new Map(), cuentas:[], lines:[nuevaLinea()], medio:null, donde:"local", cobrado:null, tab:"vender", yo:null, ready:false, downloads:null,
-    pFiltro:"Todos", nCat:"Planta", nDe:"Fran", editing:null, delConfirm:null, confirming:null, rango:"hoy", mode:"mes", ref:new Date(), saldoConfirm:false };
+    pFiltro:"Todos", nCat:"Planta", nDe:"Los dos", editing:null, delConfirm:null, confirming:null, rango:"hoy", mode:"mes", ref:new Date(), saldoConfirm:false };
   try { const t = localStorage.getItem("caja.tab"); if (t && TABS.some(x => x[0] === t)) S.tab = t; const y = localStorage.getItem("caja.yo"); if (PERSONAS.includes(y)) S.yo = y; } catch (e) {}
 
   const ventas = () => { const out = []; for (const [dia, b] of S.dias) { const vs = b.ventas || {}; for (const id in vs) { const v = vs[id]; out.push({ dia, id, ...v, medio: medioDe(v.medio), cobro: quienCobro(v) }); } } return out.sort((a, b) => (b.ts || 0) - (a.ts || 0)); };
@@ -522,7 +535,7 @@ import { firebaseConfig } from "./firebase-config.js";
   const vendidos = () => { const m = new Map(); for (const v of validas(ventas())) for (const it of v.items || []) if (it.n) { const k = norm(it.n); m.set(k, (m.get(k) || 0) + (it.c || 1)); } return m; };
   const porMedio = (list) => MEDIOS.map(([k, l, c]) => { const vs = list.filter(v => v.medio === k); return { k, l, c, n: vs.length, t: sum(vs) }; });
   const porTipo = (list) => CATS.map(c => ({ k: c, l: CLP[c], c: CATCOL[c], t: list.reduce((s, v) => s + lineasDe(v).filter(it => (it.cat || "Otro") === c).reduce((q, it) => q + it.monto, 0), 0) }));
-  const porPersona = (list) => PERSONAS.map(p => ({ k: p, l: "Lo de " + p, c: PCOL[p], t: list.reduce((s, v) => s + lineasDe(v).filter(it => dueno(it) === p).reduce((q, it) => q + it.monto, 0), 0) }));
+  const porPersona = (list) => PERSONAS.map(p => ({ k: p, l: "Lo de " + p, c: PCOL[p], t: list.reduce((s, v) => s + lineasDe(v).reduce((q, it) => q + it.monto * parte(it, p), 0), 0) }));
   const porDonde = (list) => DONDES.map(([k, l]) => ({ k, l, c: DCOL[k], t: sum(list.filter(v => (v.donde || "local") === k)) }));
 
   // ---------- navegación ----------
@@ -568,7 +581,7 @@ import { firebaseConfig } from "./firebase-config.js";
     const ex = (precio && !p.unica) ? S.lines.find(l => l.pid === p.id && l.p === precio) : null;
     let idx;
     if (ex) { ex.c++; idx = S.lines.indexOf(ex); }
-    else { const nl = { pid: p.id, n: p.n, c: 1, p: precio, cat, de: cat === "Otro" ? (PERSONAS.includes(p.de) ? p.de : "Fran") : null, unica: !!p.unica };
+    else { const nl = { pid: p.id, n: p.n, c: 1, p: precio, cat, de: cat === "Otro" ? (DUENOS.includes(p.de) ? p.de : "Los dos") : null, unica: !!p.unica };
       const vac = S.lines.findIndex(lineaVacia); if (vac >= 0) { S.lines[vac] = nl; idx = vac; } else { S.lines.push(nl); idx = S.lines.length - 1; } }
     $("q").value = ""; renderTiles(); renderLines();
     if (!precio) focusAmt(idx);
@@ -577,7 +590,7 @@ import { firebaseConfig } from "./firebase-config.js";
   function renderLines() {
     $("lines").innerHTML = S.lines.map((l, i) => {
       const tipo = CATS.map(c => `<button type="button" class="${c}" data-cat="${c}" data-i="${i}" aria-pressed="${l.cat === c}">${CL[c]}</button>`).join("");
-      const de = l.cat === "Otro" ? `<div class="deq"><span>¿De quién es la plata?</span>${PERSONAS.map(p => `<button type="button" class="chip small" data-de="${p}" data-i="${i}" aria-pressed="${(l.de || "Fran") === p}">${p}</button>`).join("")}</div>` : "";
+      const de = l.cat === "Otro" ? `<div class="deq"><span>¿De quién es la plata?</span>${DUENOS.map(p => `<button type="button" class="chip small" data-de="${p}" data-i="${i}" aria-pressed="${(l.de || "Los dos") === p}">${p}</button>`).join("")}</div>` : "";
       const falta = String(l.n).trim() && !(l.p > 0);
       return `<div class="line">
         <div class="lrow"><input type="text" class="lname" data-f="n" data-i="${i}" value="${esc(l.n)}" placeholder="Qué es (opcional)" aria-label="Qué se vendió"><button type="button" class="x" data-op="quitar" data-i="${i}" aria-label="Borrar esta línea">×</button></div>
@@ -593,7 +606,7 @@ import { firebaseConfig } from "./firebase-config.js";
     updTotal(); });
   $("lines").addEventListener("keydown", e => { if (e.key === "Enter" && e.target.closest("[data-f]")) { e.preventDefault(); e.target.blur(); } });
   $("lines").addEventListener("click", e => { const b = e.target.closest("button"); if (!b) return; const i = +b.dataset.i; const l = S.lines[i]; if (!l) return;
-    if (b.dataset.cat) { l.cat = b.dataset.cat; if (l.cat === "Otro" && !l.de) l.de = "Fran"; }
+    if (b.dataset.cat) { l.cat = b.dataset.cat; if (l.cat === "Otro" && !l.de) l.de = "Los dos"; }
     else if (b.dataset.de) l.de = b.dataset.de;
     else if (b.dataset.op === "mas") l.c++;
     else if (b.dataset.op === "menos") l.c = Math.max(1, l.c - 1);
@@ -683,7 +696,7 @@ import { firebaseConfig } from "./firebase-config.js";
     const last = ultimaCuenta(); const desde = last ? last.ts : 0;
     const vs = validas(ventas()).filter(v => (v.ts || 0) > desde);
     const vendio = { "Fran": 0, "Rocío": 0 }, efe = { "Fran": 0, "Rocío": 0 }; let trans = 0;
-    for (const v of vs) { for (const it of lineasDe(v)) vendio[dueno(it)] += it.monto; if (v.medio === "transferencia") trans += v.total || 0; else efe[v.cobro] += v.total || 0; }
+    for (const v of vs) { for (const it of lineasDe(v)) for (const p of PERSONAS) vendio[p] += it.monto * parte(it, p); if (v.medio === "transferencia") trans += v.total || 0; else efe[v.cobro] += v.total || 0; }
     const tiene = { "Fran": efe["Fran"] + trans, "Rocío": efe["Rocío"] };
     const saldo = tiene["Fran"] - vendio["Fran"]; // > 0: Fran le pasa a Rocío
     return { last, vs, vendio, efe, trans, tiene, saldo };
@@ -694,13 +707,13 @@ import { firebaseConfig } from "./firebase-config.js";
     const c = calcCuentas(); const t = textoSaldo(c);
     const desde = c.last ? `Desde que se pasaron la plata el ${fechaHora(c.last.ts).replace(/^./, m => m.toLowerCase())}` : "Desde que empezaron a usar la caja";
     const person = (p) => `<div class="person"><h3><i style="background:${PCOL[p]}"></i>${p}</h3>
-      <div class="kv"><span>Vendió de lo suyo</span><b class="num">${money(c.vendio[p])}</b><small>${p === "Fran" ? "Plantas y otros de Fran" : "Arte botánico y otros de Rocío"}</small></div>
+      <div class="kv"><span>Vendió de lo suyo</span><b class="num">${money(c.vendio[p])}</b><small>${p === "Fran" ? "Plantas y su parte de los otros" : "Arte botánico y su parte de los otros"}</small></div>
       <div class="kv"><span>Tiene</span><b class="num">${money(c.tiene[p])}</b><small>${p === "Fran" ? `Efectivo ${money(c.efe["Fran"])} + transferencias ${money(c.trans)}` : `Efectivo ${money(c.efe["Rocío"])}`}</small></div></div>`;
     const hist = S.cuentas.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 8);
     $("cuentas").innerHTML = `
       <div class="saldo"><span class="q">${t.q}</span><span class="big num">${t.m}</span><span class="hint">${esc(desde)} · ${c.vs.length} venta${c.vs.length === 1 ? "" : "s"}</span></div>
       <div class="people">${person("Fran")}${person("Rocío")}</div>
-      <div class="hint">Las transferencias y Mercado Pago van a la cuenta de Fran. El efectivo lo tiene quien cobró. Las plantas son de Fran, el arte botánico de Rocío, y los otros según el producto.</div>
+      <div class="hint">Las transferencias y Mercado Pago van a la cuenta de Fran. El efectivo lo tiene quien cobró. Las plantas son de Fran, el arte botánico de Rocío y los otros según el producto (si son de los dos, va a medias).</div>
       ${t.de ? (S.saldoConfirm ? `<div class="confirm" style="background:var(--accent-soft);color:var(--ink)">¿${t.de} ya le pasó ${t.m} a ${t.a}? Las cuentas vuelven a cero desde ahora.
           <button type="button" class="btn accent small" id="saldoSi">Sí, ya está</button><button type="button" class="btn soft small" id="saldoNo">Cancelar</button></div>`
         : `<button type="button" class="btn accent" id="saldoBtn" style="min-height:56px;font-size:16px">${t.de} ya le pasó la plata a ${t.a}</button>`) : ""}
@@ -778,7 +791,7 @@ import { firebaseConfig } from "./firebase-config.js";
 
   // ---------- precios ----------
   const catChips = (sel, attr) => CATS.map(c => `<button type="button" class="chip" ${attr}="${c}" aria-pressed="${c === sel}">${CL[c]}</button>`).join("");
-  const deChips = (sel, attr) => PERSONAS.map(p => `<button type="button" class="chip small" ${attr}="${p}" aria-pressed="${p === sel}">${p}</button>`).join("");
+  const deChips = (sel, attr) => DUENOS.map(p => `<button type="button" class="chip small" ${attr}="${p}" aria-pressed="${p === sel}">${p}</button>`).join("");
   const renderNuevo = () => { $("nCats").innerHTML = catChips(S.nCat, "data-ncat"); $("nDe").innerHTML = deChips(S.nDe, "data-nde"); $("nDeBox").hidden = S.nCat !== "Otro"; };
   $("nCats").addEventListener("click", e => { const b = e.target.closest("[data-ncat]"); if (!b) return; S.nCat = b.dataset.ncat; renderNuevo(); });
   $("nDe").addEventListener("click", e => { const b = e.target.closest("[data-nde]"); if (!b) return; S.nDe = b.dataset.nde; renderNuevo(); });
@@ -793,7 +806,7 @@ import { firebaseConfig } from "./firebase-config.js";
     const data = { n, p, cat: S.nCat, de: S.nCat === "Otro" ? S.nDe : null, unica: $("nUnica").checked, vendida: false, creado: Date.now() };
     try { const id = await DB.addProd(data); S.prods.set(id, data); $("nNombre").value = ""; $("nPrecio").value = ""; $("nUnica").checked = false; $("nNombre").focus(); toast("Agregado: " + n); render(); } catch (err) { toast(errMsg(err)); } });
   function tagsDe(p) { const c = p.cat || "Otro"; let t = `<span class="tag ${esc(c)}">${esc(CL[c] || "Otro")}</span>`;
-    if (c === "Otro") t += `<span class="tag gris">de ${esc(PERSONAS.includes(p.de) ? p.de : "Fran")}</span>`;
+    if (c === "Otro") t += `<span class="tag gris">${p.de === "Fran" || p.de === "Rocío" ? "de " + esc(p.de) : "de los dos"}</span>`;
     if (p.unica) t += `<span class="tag gris">Pieza única</span>`; if (p.vendida) t += `<span class="tag warn">Vendida</span>`; return t; }
   function renderPrecios() {
     const q = norm($("pBuscar").value); const list = prodList().filter(p => (S.pFiltro === "Todos" || (p.cat || "Otro") === S.pFiltro) && (!q || norm(p.n).includes(q)))
@@ -804,7 +817,7 @@ import { firebaseConfig } from "./firebase-config.js";
       if (S.editing === p.id) { const ec = p.cat || "Otro";
         h += `<div class="pedit"><div class="row"><div class="field grow"><label for="eN">Nombre</label><input type="text" id="eN" value="${esc(p.n)}"></div><div class="field" style="width:150px"><label for="eP">Precio ($)</label><input type="text" id="eP" inputmode="decimal" class="num" value="${p.p > 0 ? plain(p.p) : ""}" placeholder="Variable"></div></div>
         <div class="field"><span class="flabel">Tipo</span><div class="chips" id="eCats">${catChips(ec, "data-ecat")}</div></div>
-        <div class="field" id="eDeBox" ${ec === "Otro" ? "" : "hidden"}><span class="flabel">¿De quién es la plata?</span><div class="chips" id="eDe">${deChips(PERSONAS.includes(p.de) ? p.de : "Fran", "data-ede")}</div></div>
+        <div class="field" id="eDeBox" ${ec === "Otro" ? "" : "hidden"}><span class="flabel">¿De quién es la plata?</span><div class="chips" id="eDe">${deChips(DUENOS.includes(p.de) ? p.de : "Los dos", "data-ede")}</div></div>
         <label class="check"><input type="checkbox" id="eU" ${p.unica ? "checked" : ""}> Pieza única</label>
         ${p.vendida ? `<button type="button" class="btn line small" data-revive="${p.id}">Volver a ponerla en venta</button>` : ""}
         <div class="row"><button type="button" class="btn dark" data-save="${p.id}">Guardar</button><button type="button" class="btn soft" data-cancel="1">Cancelar</button><span style="flex:1"></span>
@@ -822,7 +835,7 @@ import { firebaseConfig } from "./firebase-config.js";
     if (t.dataset.delyes) { try { await DB.delProd(t.dataset.delyes); S.prods.delete(t.dataset.delyes); S.editing = null; S.delConfirm = null; toast("Producto borrado"); render(); } catch (err) { toast(errMsg(err)); } return; }
     if (t.dataset.save) { const id = t.dataset.save; const n = $("eN").value.trim(), rawP = $("eP").value.trim(); const p = rawP ? parsePrecio(rawP) : null;
       const c = (document.querySelector('[data-ecat][aria-pressed="true"]') || {}).dataset?.ecat || "Otro";
-      const de = c === "Otro" ? ((document.querySelector('[data-ede][aria-pressed="true"]') || {}).dataset?.ede || "Fran") : null;
+      const de = c === "Otro" ? ((document.querySelector('[data-ede][aria-pressed="true"]') || {}).dataset?.ede || "Los dos") : null;
       if (!n || (rawP && !(p > 0))) { toast("Revisá el nombre y el precio"); return; }
       if (prodList().some(x => x.id !== id && !x.vendida && norm(x.n) === norm(n))) { toast("Ya hay otro producto con ese nombre"); return; }
       const patch = { n, p, cat: c, de, unica: $("eU").checked };
@@ -854,6 +867,7 @@ import { firebaseConfig } from "./firebase-config.js";
     if (S.tab === "precios") { if (full || !S.editing) renderPrecios(); renderAumento(); }
   }
   function setSync(st, txt) { document.querySelectorAll("[data-dot]").forEach(d => d.className = "dot " + st); document.querySelectorAll("[data-sync]").forEach(d => d.textContent = txt); }
+  $("version").textContent = "v" + VERSION;
   const fail = () => { setSync("off", "Sin conexión"); $("banner").hidden = false; $("banner").textContent = "Se cortó la conexión con el registro. Recargá la página."; };
 
   setRango("hoy"); renderNuevo(); renderDonde(); setTab(S.tab);
@@ -898,6 +912,7 @@ import { firebaseConfig } from "./firebase-config.js";
       cuentas: (arr) => { S.cuentas = arr; render(); },
       err: errDb });
     S.ready = true; render(true);
+    DB.sembrar([["rosario","Rosario"],["fitonia","Fitonia"],["peperomia","Peperomia"],["potus","Potus"],["ficus","Ficus"],["aromaticas","Aromáticas"],["suculentas","Suculentas"],["ala-de-angel","Ala de ángel"],["philodendron","Philodendron"]]).catch(() => {});
   });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});
 })();

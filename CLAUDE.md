@@ -19,16 +19,19 @@ App de caja del vivero **Árboles · Espacio Botánico** (Córdoba). La usan **F
 - `logo.png`, íconos y `manifest.webmanifest`.
 
 ## Reglas del negocio (ya implementadas)
-- Tipos: **Planta** (plata de Fran), **Arte botánico** (plata de Rocío, artesanías con flores prensadas), **Otro** (se elige de quién es por producto).
+- Tipos: **Planta** (plata de Fran), **Arte botánico** (plata de Rocío, artesanías con flores prensadas), **Otro** (se elige por producto: Fran, Rocío o "Los dos" a medias; por defecto los dos).
 - Medios: **Efectivo** (queda en la billetera de quien cobró) y **Transferencia / Mercado Pago** (siempre a la cuenta de Fran, alias arbolesr4).
 - No hay caja ni cambio: en lugar de cierre de caja hay **Cuentas** (quién le pasa cuánto a quién desde la última vez que se pasaron la plata).
 - Precios: algunos fijos, otros varían (precio vacío = "Precio a elegir"). Descuentos: "¿Cobraste otro monto?" guarda `lista` y `total`; los montos por línea se reparten en proporción.
 - Producto opcional al vender. Piezas únicas de Rocío se marcan `vendida` al venderse.
 - Dónde: Local / Instagram-WhatsApp / Feria. Cada dispositivo elige una vez quién cobra (se guarda en `usuarios/{uid}`).
+- Versión visible abajo a la derecha (`VERSION` en `index.html`): subirla en cada cambio.
+- Plantas iniciales cargadas una sola vez (`config/semilla`), todas con precio variable.
 - Colores: Turquesa (#1F7A72) sobre blanco cálido; fuentes Jost + Nunito Sans.
 
 ## Datos en Firestore
 - `dias/{AAAA-MM-DD}`: `{ fecha, ventas: { [id]: { ts, items:[{n,c,p,cat,de,pid?}], lista, total, medio, cobro, donde, nota, anulada? } } }`
-- `productos/{id}`: `{ n, p|null, cat, de, unica, vendida, creado }`
+- `productos/{id}`: `{ n, p|null, cat, de: "Fran"|"Rocío"|"Los dos"|null, unica, vendida, creado }`
+- `config/semilla`: marca de que ya se cargaron las plantas iniciales
 - `cuentas/{id}`: `{ ts, monto, de, a, por }`
 - `usuarios/{uid}`: `{ nombre: "Fran"|"Rocío", email }`
