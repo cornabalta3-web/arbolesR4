@@ -19,9 +19,10 @@ App de caja del vivero **Árboles · Espacio Botánico** (Córdoba). La usan **F
 - `logo.png`, íconos y `manifest.webmanifest`.
 
 ## Reglas del negocio (ya implementadas)
-- Tipos: **Planta** (plata de Fran), **Arte botánico** (plata de Rocío, artesanías con flores prensadas), **Otro** (se elige por producto: Fran, Rocío o "Los dos" a medias; por defecto los dos).
+- Tipos: **Planta** y **Otro** (de los dos), **Arte botánico** (de Rocío, artesanías con flores prensadas). No se pregunta de quién es la plata al vender.
 - Medios: **Efectivo** (queda en la billetera de quien cobró) y **Transferencia / Mercado Pago** (siempre a la cuenta de Fran, alias arbolesr4).
-- No hay caja ni cambio: en lugar de cierre de caja hay **Cuentas** (quién le pasa cuánto a quién desde la última vez que se pasaron la plata).
+- No hay caja ni cambio. **Cierre del día**: total, efectivo vs transferencia, qué se vendió y por tipo, con "Copiar resumen" para WhatsApp.
+- **No mostrar quién le debe a quién** ni saldos entre Fran y Rocío: Balta lo pidió explícitamente porque genera conflicto. La colección `cuentas` quedó en desuso.
 - Precios: algunos fijos, otros varían (precio vacío = "Precio a elegir"). Descuentos: "¿Cobraste otro monto?" guarda `lista` y `total`; los montos por línea se reparten en proporción.
 - Producto opcional al vender. Piezas únicas de Rocío se marcan `vendida` al venderse.
 - Dónde: Local / Instagram-WhatsApp / Feria. Cada dispositivo elige una vez quién cobra (se guarda en `usuarios/{uid}`).
@@ -36,5 +37,5 @@ App de caja del vivero **Árboles · Espacio Botánico** (Córdoba). La usan **F
 - `dias/{AAAA-MM-DD}`: `{ fecha, ventas: { [id]: { ts, items:[{n,c,p,cat,de,pid?}], lista, total, medio, cobro, donde, nota, anulada?, prueba? } } }`
 - `productos/{id}`: `{ n, p|null, cat, de: "Fran"|"Rocío"|"Los dos"|null, unica, vendida, creado }`
 - `config/semilla`: marca de que ya se cargaron las plantas iniciales
-- `cuentas/{id}`: `{ ts, monto, de, a, por }`
+- `cuentas/{id}`: en desuso (antes guardaba cuando se pasaban la plata)
 - `usuarios/{uid}`: `{ nombre: "Fran"|"Rocío", email }`

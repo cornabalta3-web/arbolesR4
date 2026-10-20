@@ -388,9 +388,10 @@ img{max-width:100%}
       </section>
 
       <!-- CUENTAS -->
-      <section id="p-cuentas" data-panel hidden>
-        <div class="pagehead"><h1>Cuentas</h1><button type="button" class="btn line small" id="btnCopiar">Copiar resumen</button></div>
-        <div id="cuentas" style="display:flex;flex-direction:column;gap:16px"></div>
+      <section id="p-cierre" data-panel hidden>
+        <div class="pagehead"><h1>Cierre del día</h1>
+          <div class="row" style="align-items:center"><input type="date" id="cDia" aria-label="Día" style="width:auto"><button type="button" class="btn line small" id="btnCopiar">Copiar resumen</button></div></div>
+        <div id="cierre" style="display:flex;flex-direction:column;gap:16px"></div>
       </section>
 
       <!-- ANÁLISIS -->
@@ -422,7 +423,7 @@ img{max-width:100%}
               <div class="field"><label for="nNombre">Nombre</label><input type="text" id="nNombre" placeholder="Ej: Potus maceta 12"></div>
               <div class="field"><label for="nPrecio">Precio ($)</label><input type="text" id="nPrecio" inputmode="decimal" class="num" placeholder="Vacío si cambia según la planta"></div>
               <div class="field"><span class="flabel">Tipo</span><div class="chips" id="nCats"></div></div>
-              <div class="field" id="nDeBox" hidden><span class="flabel">¿De quién es la plata?</span><div class="chips" id="nDe"></div></div>
+              <div id="nDeBox" hidden><div id="nDe"></div></div>
               <label class="check"><input type="checkbox" id="nUnica"> Pieza única (se saca de la lista al venderse)</label>
               <button type="submit" class="btn dark">Agregar a la lista</button>
             </form>
@@ -485,11 +486,11 @@ import { firebaseConfig } from "./firebase-config.js";
   const DLBL = Object.fromEntries(DONDES);
   const DCOL = {local:"#1F7A72", redes:"#4E8A3A", feria:"#D9732A"};
   // de quién es la plata de cada cosa: plantas → Fran, arte botánico → Rocío, otros → según el producto
-  const VERSION = "1.4";
+  const VERSION = "1.5";
   const ADMIN = "cornabalta3@gmail.com";
   const DUENOS = ["Fran","Rocío","Los dos"];
   // plantas → Fran, arte botánico → Rocío, otros → según el producto (por defecto, de los dos a medias)
-  const dueno = (it) => it.cat === "Arte" ? "Rocío" : it.cat === "Planta" ? "Fran" : (DUENOS.includes(it.de) ? it.de : "Los dos");
+  const dueno = (it) => it.cat === "Arte" ? "Rocío" : "Los dos"; // plantas y otros son de los dos
   const parte = (it, p) => { const d = dueno(it); return d === p ? 1 : d === "Los dos" ? 0.5 : 0; };
   const quienCobro = (v) => PERSONAS.includes(v.cobro) ? v.cobro : "Fran";
   // las transferencias y MP van siempre a la cuenta de Fran; el efectivo, a la billetera de quien cobró
@@ -562,11 +563,11 @@ import { firebaseConfig } from "./firebase-config.js";
   const ICONS = {
     vender:'<path d="M12 5v14M5 12h14"/>',
     registro:'<path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01"/>',
-    cuentas:'<path d="M4 8h14l-3-3M20 16H6l3 3"/>',
+    cierre:'<rect x="3" y="6" width="18" height="13" rx="2"/><path d="M3 10h18M7 15h3"/>',
     analisis:'<path d="M5 20V11M12 20V5M19 20v-6"/>',
     precios:'<path d="M20 12l-8 8-9-9V3h8z"/><circle cx="7.5" cy="7.5" r="1.5"/>'
   };
-  const TABS = [["vender","Vender"],["registro","Registro"],["cuentas","Cuentas"],["analisis","Análisis"],["precios","Precios"]];
+  const TABS = [["vender","Vender"],["registro","Registro"],["cierre","Cierre"],["analisis","Análisis"],["precios","Precios"]];
   const navBtn = (k, l) => `<button type="button" data-tab="${k}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[k]}</svg>${l}</button>`;
   $("sideNav").innerHTML = TABS.map(([k, l]) => navBtn(k, l)).join("");
   $("bottomNav").innerHTML = TABS.map(([k, l]) => navBtn(k, l)).join("");
@@ -642,7 +643,7 @@ import { firebaseConfig } from "./firebase-config.js";
   function renderLines() {
     $("lines").innerHTML = S.lines.map((l, i) => {
       const tipo = CATS.map(c => `<button type="button" class="${c}" data-cat="${c}" data-i="${i}" aria-pressed="${l.cat === c}">${CL[c]}</button>`).join("");
-      const de = l.cat === "Otro" ? `<div class="deq"><span>¿De quién es la plata?</span>${DUENOS.map(p => `<button type="button" class="chip small" data-de="${p}" data-i="${i}" aria-pressed="${(l.de || "Los dos") === p}">${p}</button>`).join("")}</div>` : "";
+      const de = "";
       const falta = String(l.n).trim() && !(l.p > 0);
       return `<div class="line">
         <div class="lrow"><input type="text" class="lname" data-f="n" data-i="${i}" value="${esc(l.n)}" placeholder="Qué es (opcional)" aria-label="Qué se vendió"><button type="button" class="x" data-op="quitar" data-i="${i}" aria-label="Borrar esta línea">×</button></div>
@@ -701,10 +702,9 @@ import { firebaseConfig } from "./firebase-config.js";
   function renderHoy() {
     const ok = validas(ventas().filter(v => v.dia === hoy()));
     $("hoyStrip").innerHTML = `<span>Hoy · ${ok.length} venta${ok.length === 1 ? "" : "s"}</span><b>${money(sum(ok))}</b>`;
-    const pp = porPersona(ok);
     $("hoyCard").innerHTML = `<div style="display:flex;justify-content:space-between;align-items:baseline"><span class="eyebrow">Hoy</span><span style="font-size:14px;color:var(--on-fill-muted);font-weight:600">${ok.length} venta${ok.length === 1 ? "" : "s"}</span></div>
       <div class="big num">${money(sum(ok))}</div>
-      <div class="pm num">${porMedio(ok).map(m => `<div><i style="background:${m.c}"></i>${MCORTO[m.k]}<b>${money(m.t)}</b></div>`).join("")}${pp.map(p => `<div><i style="background:${p.c}"></i>${esc(p.l)}<b>${money(p.t)}</b></div>`).join("")}</div>`;
+      <div class="pm num">${porMedio(ok).map(m => `<div><i style="background:${m.c}"></i>${MCORTO[m.k]}<b>${money(m.t)}</b></div>`).join("")}</div>`;
     const ult = ventas().filter(v => v.dia === hoy() && !v.anulada).slice(0, 5);
     $("ultimas").innerHTML = ult.length ? ult.map(v => `<div class="mini"><span class="h num">${hora(v.ts)}</span><span class="t">${esc(itemsTxt(v))}</span><b class="num">${money(v.total)}</b></div>`).join("") : `<div class="hint" style="padding:8px 0 4px">Todavía no hay ventas hoy.</div>`;
   }
@@ -737,52 +737,30 @@ import { firebaseConfig } from "./firebase-config.js";
     const key = t.dataset.yes || t.dataset.restore; if (!key || !S.ready) return; const [dia, id] = key.split("|"); const an = !!t.dataset.yes;
     try { await DB.patchVenta(dia, id, an ? { anulada: true, anuladaTs: Date.now(), anuladaPor: S.yo || null } : { anulada: false }); S.confirming = null; toast(an ? "Venta anulada" : "Venta restaurada"); } catch (err) { toast(errMsg(err)); } });
   $("btnCsv").addEventListener("click", async () => {
-    const rows = [["Fecha","Hora","Qué","Tipo","De quién","Cantidad","Precio","Subtotal","Cobró","Medio de pago","Dónde","Total venta","Anulada","Nota"]];
-    for (const v of filtradas().slice().reverse()) for (const it of v.items || []) rows.push([v.dia, hora(v.ts), it.n || "", CL[it.cat] || "", dueno(it), it.c || 1, it.p, (it.c || 1) * it.p, v.cobro, MLBL[v.medio], DLBL[v.donde || "local"] || "", v.total, v.anulada ? "Sí" : "No", v.nota || ""]);
+    const rows = [["Fecha","Hora","Qué","Tipo","Cantidad","Precio","Subtotal","Cobró","Medio de pago","Dónde","Total venta","Anulada","Nota"]];
+    for (const v of filtradas().slice().reverse()) for (const it of v.items || []) rows.push([v.dia, hora(v.ts), it.n || "", CL[it.cat] || "", it.c || 1, it.p, (it.c || 1) * it.p, v.cobro, MLBL[v.medio], DLBL[v.donde || "local"] || "", v.total, v.anulada ? "Sí" : "No", v.nota || ""]);
     const csv = "﻿" + rows.map(r => r.map(c => { const s = String(c); return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }).join(";")).join("\n");
     if (!S.downloads) { toast("Descargar no está disponible en esta vista"); return; }
     try { await S.downloads.save({ filename: `ventas-arboles-${$("rDesde").value}-a-${$("rHasta").value}.csv`, data: csv }); } catch (e) { toast("No se descargó el archivo"); } });
 
-  // ---------- cuentas ----------
-  const ultimaCuenta = () => S.cuentas.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0))[0] || null;
-  function calcCuentas() {
-    const last = ultimaCuenta(); const desde = last ? last.ts : 0;
-    const vs = validas(ventas()).filter(v => (v.ts || 0) > desde);
-    const vendio = { "Fran": 0, "Rocío": 0 }, efe = { "Fran": 0, "Rocío": 0 }; let trans = 0;
-    for (const v of vs) { for (const it of lineasDe(v)) for (const p of PERSONAS) vendio[p] += it.monto * parte(it, p); if (v.medio === "transferencia") trans += v.total || 0; else efe[v.cobro] += v.total || 0; }
-    const tiene = { "Fran": efe["Fran"] + trans, "Rocío": efe["Rocío"] };
-    const saldo = tiene["Fran"] - vendio["Fran"]; // > 0: Fran le pasa a Rocío
-    return { last, vs, vendio, efe, trans, tiene, saldo };
+  // ---------- cierre del día ----------
+  $("cDia").value = hoy(); $("cDia").addEventListener("input", () => renderCierre());
+  function renderCierre() {
+    const dia = $("cDia").value || hoy(); const all = ventas().filter(v => v.dia === dia && !v.prueba); const ok = validas(all);
+    const prods = new Map(); ok.forEach(v => lineasDe(v).forEach(it => { const k = it.n ? it.n.trim() : CL[it.cat] + " (sin nombre)"; const e = prods.get(k) || { c: 0, t: 0 }; e.c += it.c || 1; e.t += it.monto; prods.set(k, e); }));
+    const anul = all.length - ok.length;
+    $("cierre").innerHTML = `
+      <div class="kpis"><div class="kpi dark"><span class="eyebrow">Total del día</span><b class="num">${money(sum(ok))}</b><span>${esc(diaLargo(dia))}</span></div>
+        <div class="kpi"><span class="eyebrow">Ventas</span><b class="num">${ok.length}</b><span>${anul ? anul + " anulada" + (anul > 1 ? "s" : "") + ", no suman" : "en el día"}</span></div>
+        ${porMedio(ok).map(m => `<div class="kpi"><span class="eyebrow">${esc(MCORTO[m.k])}</span><b class="num">${money(m.t)}</b><span>${m.n} venta${m.n === 1 ? "" : "s"}</span></div>`).join("")}</div>
+      <div class="cols">
+        <div class="card"><div class="eyebrow">Qué se vendió</div>${prods.size ? `<div class="tbl"><table><thead><tr><th>Qué</th><th class="r">Cant.</th><th class="r">Monto</th></tr></thead><tbody>
+          ${[...prods].sort((a, b) => b[1].t - a[1].t).map(([n, e]) => `<tr><td>${esc(n)}</td><td class="r">${e.c}</td><td class="r"><b>${money(e.t)}</b></td></tr>`).join("")}</tbody></table></div>` : `<div class="hint">No hubo ventas este día.</div>`}</div>
+        <div class="card"><div class="eyebrow">Plantas, arte botánico y otros</div>${barsHTML(porTipo(ok))}</div>
+      </div>`;
   }
-  function textoSaldo(c) { const x = Math.round(c.saldo); if (Math.abs(x) < 1) return { q: "Están a mano", m: "$ 0", de: null, a: null };
-    return x > 0 ? { q: "Fran le pasa a Rocío", m: money(x), de: "Fran", a: "Rocío" } : { q: "Rocío le pasa a Fran", m: money(-x), de: "Rocío", a: "Fran" }; }
-  function renderCuentas() {
-    const c = calcCuentas(); const t = textoSaldo(c);
-    const desde = c.last ? `Desde que se pasaron la plata el ${fechaHora(c.last.ts).replace(/^./, m => m.toLowerCase())}` : "Desde que empezaron a usar la caja";
-    const person = (p) => `<div class="person"><h3><i style="background:${PCOL[p]}"></i>${p}</h3>
-      <div class="kv"><span>Vendió de lo suyo</span><b class="num">${money(c.vendio[p])}</b><small>${p === "Fran" ? "Plantas y su parte de los otros" : "Arte botánico y su parte de los otros"}</small></div>
-      <div class="kv"><span>Tiene</span><b class="num">${money(c.tiene[p])}</b><small>${p === "Fran" ? `Efectivo ${money(c.efe["Fran"])} + transferencias ${money(c.trans)}` : `Efectivo ${money(c.efe["Rocío"])}`}</small></div></div>`;
-    const hist = S.cuentas.slice().sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 8);
-    $("cuentas").innerHTML = `
-      <div class="saldo"><span class="q">${t.q}</span><span class="big num">${t.m}</span><span class="hint">${esc(desde)} · ${c.vs.length} venta${c.vs.length === 1 ? "" : "s"}</span></div>
-      <div class="people">${person("Fran")}${person("Rocío")}</div>
-      <div class="hint">Las transferencias y Mercado Pago van a la cuenta de Fran. El efectivo lo tiene quien cobró. Las plantas son de Fran, el arte botánico de Rocío y los otros según el producto (si son de los dos, va a medias).</div>
-      ${t.de ? (S.saldoConfirm ? `<div class="confirm" style="background:var(--accent-soft);color:var(--ink)">¿${t.de} ya le pasó ${t.m} a ${t.a}? Las cuentas vuelven a cero desde ahora.
-          <button type="button" class="btn accent small" id="saldoSi">Sí, ya está</button><button type="button" class="btn soft small" id="saldoNo">Cancelar</button></div>`
-        : `<button type="button" class="btn accent" id="saldoBtn" style="min-height:56px;font-size:16px">${t.de} ya le pasó la plata a ${t.a}</button>`) : ""}
-      <div class="card" style="gap:0"><div class="eyebrow" style="padding-bottom:6px">Veces anteriores</div>
-        ${hist.length ? hist.map(h => `<div class="hist"><span>${esc(fechaHora(h.ts))}</span><b class="num">${h.monto > 0 ? esc(h.de) + " → " + esc(h.a) + " " + money(h.monto) : "A mano"}</b></div>`).join("") : `<div class="hint" style="padding:6px 0">Todavía no hicieron cuentas.</div>`}</div>`;
-  }
-  $("cuentas").addEventListener("click", async e => {
-    if (e.target.closest("#saldoBtn")) { S.saldoConfirm = true; renderCuentas(); return; }
-    if (e.target.closest("#saldoNo")) { S.saldoConfirm = false; renderCuentas(); return; }
-    if (!e.target.closest("#saldoSi") || !S.ready) return;
-    const c = calcCuentas(); const t = textoSaldo(c);
-    try { await DB.addCuenta({ ts: Date.now(), monto: Math.abs(Math.round(c.saldo)), de: t.de, a: t.a, por: S.yo || null }); S.saldoConfirm = false; toast("Listo, cuentas en cero"); }
-    catch (er) { toast(errMsg(er)); } });
-  $("btnCopiar").addEventListener("click", async () => { const c = calcCuentas(); const t = textoSaldo(c);
-    const txt = [`Cuentas Árboles (${c.last ? "desde el " + diaLargo(dayKey(new Date(c.last.ts))).toLowerCase() : "desde el principio"})`,
-      `Fran vendió ${money(c.vendio["Fran"])} y tiene ${money(c.tiene["Fran"])}`, `Rocío vendió ${money(c.vendio["Rocío"])} y tiene ${money(c.tiene["Rocío"])}`, `${t.q}: ${t.m}`].join("\n");
+  $("btnCopiar").addEventListener("click", async () => { const dia = $("cDia").value || hoy(); const ok = validas(ventas().filter(v => v.dia === dia));
+    const txt = [`Árboles · ${diaLargo(dia)}`, ...porMedio(ok).map(m => `${MCORTO[m.k]}: ${money(m.t)}`), ...porTipo(ok).filter(t => t.t > 0).map(t => `${t.l}: ${money(t.t)}`), `TOTAL: ${money(sum(ok))} (${ok.length} ventas)`].join("\n");
     try { await navigator.clipboard.writeText(txt); toast("Resumen copiado, pegalo en WhatsApp"); } catch (er) { toast("No se pudo copiar en este dispositivo"); } });
 
   // ---------- análisis ----------
@@ -834,7 +812,6 @@ import { firebaseConfig } from "./firebase-config.js";
         <div class="card"><div class="eyebrow">Lo más vendido</div><div class="tbl"><table><thead><tr><th>#</th><th>Qué</th><th class="r">Unid.</th><th class="r">Monto</th></tr></thead><tbody>
           ${top.map(([n, e], i) => `<tr><td class="num" style="font-family:var(--f-display);font-weight:800;color:${i ? "var(--muted)" : "var(--orange)"}">${i + 1}</td><td><b>${esc(n)}</b> <span class="tag ${esc(e.cat || "Otro")}">${esc(CL[e.cat] || "Otro")}</span></td><td class="r">${e.c}</td><td class="r"><b>${money(e.t)}</b></td></tr>`).join("")}</tbody></table></div></div>
         <div style="display:flex;flex-direction:column;gap:16px;min-width:0">
-          <div class="card"><div class="eyebrow">Lo de cada uno</div>${barsHTML(porPersona(cur))}</div>
           <div class="card"><div class="eyebrow">Cómo pagan</div>${barsHTML(porMedio(cur).map(m => ({ l: m.l, t: m.t, c: m.c })))}</div>
           <div class="card"><div class="eyebrow">Dónde se vende</div>${barsHTML(porDonde(cur))}</div>
           ${S.mode === "mes" ? `<div class="card"><div class="eyebrow">Qué días se vende más</div>${barsHTML(sem)}</div>` : ""}
@@ -859,7 +836,6 @@ import { firebaseConfig } from "./firebase-config.js";
     const data = { n, p, cat: S.nCat, de: S.nCat === "Otro" ? S.nDe : null, unica: $("nUnica").checked, vendida: false, creado: Date.now() };
     try { const id = await DB.addProd(data); S.prods.set(id, data); $("nNombre").value = ""; $("nPrecio").value = ""; $("nUnica").checked = false; $("nNombre").focus(); toast("Agregado: " + n); render(); } catch (err) { toast(errMsg(err)); } });
   function tagsDe(p) { const c = p.cat || "Otro"; let t = `<span class="tag ${esc(c)}">${esc(CL[c] || "Otro")}</span>`;
-    if (c === "Otro") t += `<span class="tag gris">${p.de === "Fran" || p.de === "Rocío" ? "de " + esc(p.de) : "de los dos"}</span>`;
     if (p.unica) t += `<span class="tag gris">Pieza única</span>`; if (p.vendida) t += `<span class="tag warn">Vendida</span>`; return t; }
   function renderPrecios() {
     const q = norm($("pBuscar").value); const list = prodList().filter(p => (S.pFiltro === "Todos" || (p.cat || "Otro") === S.pFiltro) && (!q || norm(p.n).includes(q)))
@@ -870,7 +846,7 @@ import { firebaseConfig } from "./firebase-config.js";
       if (S.editing === p.id) { const ec = p.cat || "Otro";
         h += `<div class="pedit"><div class="row"><div class="field grow"><label for="eN">Nombre</label><input type="text" id="eN" value="${esc(p.n)}"></div><div class="field" style="width:150px"><label for="eP">Precio ($)</label><input type="text" id="eP" inputmode="decimal" class="num" value="${p.p > 0 ? plain(p.p) : ""}" placeholder="Variable"></div></div>
         <div class="field"><span class="flabel">Tipo</span><div class="chips" id="eCats">${catChips(ec, "data-ecat")}</div></div>
-        <div class="field" id="eDeBox" ${ec === "Otro" ? "" : "hidden"}><span class="flabel">¿De quién es la plata?</span><div class="chips" id="eDe">${deChips(DUENOS.includes(p.de) ? p.de : "Los dos", "data-ede")}</div></div>
+        <div id="eDeBox" hidden></div>
         <label class="check"><input type="checkbox" id="eU" ${p.unica ? "checked" : ""}> Pieza única</label>
         ${p.vendida ? `<button type="button" class="btn line small" data-revive="${p.id}">Volver a ponerla en venta</button>` : ""}
         <div class="row"><button type="button" class="btn dark" data-save="${p.id}">Guardar</button><button type="button" class="btn soft" data-cancel="1">Cancelar</button><span style="flex:1"></span>
@@ -915,7 +891,7 @@ import { firebaseConfig } from "./firebase-config.js";
     $("fecha").textContent = diaLargo(hoy());
     if (S.tab === "vender") { renderWho(); renderTiles(); renderHoy(); if (full) renderLines(); else updCobrar(); }
     if (S.tab === "registro") renderRegistro();
-    if (S.tab === "cuentas") renderCuentas();
+    if (S.tab === "cierre") renderCierre();
     if (S.tab === "analisis") renderAnalisis();
     if (S.tab === "precios") { if (full || !S.editing) renderPrecios(); renderAumento(); }
   }
@@ -946,7 +922,7 @@ import { firebaseConfig } from "./firebase-config.js";
     const ult = ventas().filter(v => !v.prueba)[0];
     $("revBody").innerHTML = `<div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 id="revTit">Revisión · v${VERSION}</h2><button type="button" class="btn soft small" id="revCerrar">Cerrar</button></div>
       <div class="hint">Solo lo ves vos (${esc(ADMIN)}).</div>
-      <label class="switch"><input type="checkbox" id="revPrueba" ${S.prueba ? "checked" : ""}> Modo prueba: mis ventas no cuentan en totales ni cuentas</label>
+      <label class="switch"><input type="checkbox" id="revPrueba" ${S.prueba ? "checked" : ""}> Modo prueba: mis ventas no cuentan en los totales</label>
       <div class="fila"><span>Cobrar como</span><span class="chips">${PERSONAS.map(p => `<button type="button" class="chip small" data-revyo="${p}" aria-pressed="${S.yo === p}">${p}</button>`).join("")}</span></div>
       <div class="fila"><span>Ventas reales</span><b class="num">${reales.length} · ${money(sum(reales))}</b></div>
       <div class="fila"><span>Última venta real</span><b>${ult ? esc(diaLargo(ult.dia)) + " " + hora(ult.ts) + " · " + esc(ult.cobro) : "—"}</b></div>
