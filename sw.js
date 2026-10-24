@@ -1,7 +1,7 @@
 // Guarda una copia de la app para que abra aunque no haya señal (por ejemplo, en una feria).
 // Siempre intenta la red primero, así nunca queda una versión vieja cuando hay internet.
 // Las ventas sin señal las guarda Firestore en el celu y las sube solas después.
-const CACHE = "caja-arboles-v6";
+const CACHE = "caja-arboles-v7";
 const PROPIOS = ["./", "index.html", "firebase-config.js", "logo.png", "manifest.webmanifest", "icon-192.png"];
 
 self.addEventListener("install", (e) => {
@@ -33,6 +33,6 @@ self.addEventListener("fetch", (e) => {
         }
         return res;
       })
-      .catch(() => caches.match(req).then((r) => r || caches.match("index.html")))
+      .catch(() => caches.match(req).then((r) => r || (url.pathname.includes("/tienda/") ? Response.error() : caches.match("index.html"))))
   );
 });

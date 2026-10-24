@@ -1,8 +1,9 @@
 # Caja Árboles — contexto para actualizar la app
 
-App de caja del vivero **Árboles · Espacio Botánico** (Córdoba). La usan **Fran** (panchocorna@gmail.com) y **Rocío** (rociocupellino@gmail.com); la mantiene **Balta** (cornabalta3@gmail.com).
+App de caja y tienda web del vivero **Árboles · Espacio Botánico** (Río Cuarto, Córdoba). La usan **Fran** (panchocorna@gmail.com) y **Rocío** (rociocupellino@gmail.com); la mantiene **Balta** (cornabalta3@gmail.com).
 
-- En línea: https://cornabalta3-web.github.io/arbolesR4/ (GitHub Pages desde `main` / root; se republica sola al subir cambios).
+- Caja: https://cornabalta3-web.github.io/arbolesR4/ (GitHub Pages desde `main` / root; se republica sola al subir cambios).
+- Tienda para clientes: https://cornabalta3-web.github.io/arbolesR4/tienda/ (sin login).
 - Datos: Firebase, proyecto `arbolesr4-72a22`, Firestore en `southamerica-east1`. Login con Google.
 
 ## Cómo pidió Balta que se trabaje
@@ -12,9 +13,11 @@ App de caja del vivero **Árboles · Espacio Botánico** (Córdoba). La usan **F
 - Commits en castellano. Nunca tocar los datos de Firestore desde el código sin avisar.
 
 ## Archivos
-- `index.html`: **toda la app** (HTML + CSS + JS módulo). Es la fuente de verdad: editar acá.
+- `index.html`: **toda la caja** (HTML + CSS + JS módulo). Es la fuente de verdad: editar acá.
+- `tienda/index.html`: **toda la tienda web** (catálogo + pedido por WhatsApp). Usa `../firebase-config.js` y `../logo.png`. Sin service worker propio.
+- `og.png`: imagen que se ve al compartir el link de la tienda.
 - `firebase-config.js`: config pública del proyecto (no es secreta).
-- `firestore.rules`: copia de las reglas publicadas. Si se cambia, Balta tiene que pegarla en Firebase → Firestore → Reglas → Publicar.
+- `firestore.rules`: copia de las reglas publicadas. La tienda (sin login) solo lee productos con `web == true`, sus fotos y `config/tienda`; nadie de afuera escribe. Si se cambia, Balta tiene que pegarla en Firebase → Firestore → Reglas → Publicar.
 - `sw.js`: cache para abrir sin señal (red primero). Subir `CACHE` (`caja-arboles-vN`) si cambian archivos cacheados de forma importante.
 - `logo.png`, íconos y `manifest.webmanifest`.
 
@@ -31,11 +34,16 @@ App de caja del vivero **Árboles · Espacio Botánico** (Córdoba). La usan **F
 - Plantas iniciales cargadas una sola vez (`config/semilla`), todas con precio variable.
 - Colores: Turquesa (#1F7A72) sobre blanco cálido; fuentes Jost + Nunito Sans.
 - **QR para cobrar:** con Transferencia elegida aparece "Mostrar QR al cliente" (pantalla blanca con monto, `qr.png`, alias y titular). Si falta `qr.png`, muestra solo el alias.
+- **Tienda web:** catálogo con los productos marcados "Mostrar en la tienda web" en Precios (se ocultan las piezas únicas vendidas). Carrito → abre WhatsApp con el pedido escrito (productos, total, retiro en el local o envío en Río Cuarto con dirección, nombre, nota). Pago por transferencia al alias arbolesr4 (Francisco Corna) cuando confirman. Precio vacío = "Consultar precio". El envío se coordina por WhatsApp (no hay costo cargado). No se guardan pedidos en Firestore.
+- **Fotos:** se suben desde Precios (editar producto o al agregarlo, con "Mostrar en la tienda web" marcado); se achican en el celu a 800 px JPEG y se guardan en `fotos/{id}` (sin Firebase Storage, para no pasar a plan pago).
+- **Datos de la tienda** (Precios → Tienda web → Datos de la tienda): WhatsApp donde llegan los pedidos (se guarda como 549 + característica + número), Instagram y dónde/cuándo se retira. Los pueden cambiar Fran o Rocío.
 - **Modo oscuro:** botón luna/sol arriba a la derecha; se guarda por dispositivo (`caja.tema`) y por defecto sigue al celu. Todo color va por variables CSS (`--fill`/`--on-fill` para los bloques oscuros); no usar colores fijos nuevos.
 
 ## Datos en Firestore
 - `dias/{AAAA-MM-DD}`: `{ fecha, ventas: { [id]: { ts, items:[{n,c,p,cat,de,pid?}], lista, total, medio, cobro, donde, nota, anulada?, prueba? } } }`
-- `productos/{id}`: `{ n, p|null, cat, de: "Fran"|"Rocío"|"Los dos"|null, unica, vendida, creado }`
+- `productos/{id}`: `{ n, p|null, cat, de: "Fran"|"Rocío"|"Los dos"|null, unica, vendida, creado, web?, d?, foto?: ts|null }` (`d` = descripción para la web)
+- `fotos/{id}`: `{ img: dataURL JPEG, ts }` (mismo id que el producto)
+- `config/tienda`: `{ whatsapp: "549..."|null, instagram|null, retiro|null }`
 - `config/semilla`: marca de que ya se cargaron las plantas iniciales
 - `cuentas/{id}`: en desuso (antes guardaba cuando se pasaban la plata)
 - `usuarios/{uid}`: `{ nombre: "Fran"|"Rocío", email }`

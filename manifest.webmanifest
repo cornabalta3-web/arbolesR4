@@ -1,7 +1,7 @@
 {
   "name": "Caja Árboles",
   "short_name": "Caja Árboles",
-  "description": "Caja del vivero Árboles: ventas, cuentas entre Fran y Rocío y lista de precios.",
+  "description": "Caja del vivero Árboles: ventas, cierre del día y lista de precios.",
   "start_url": "./",
   "scope": "./",
   "display": "browser",

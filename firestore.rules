@@ -1,6 +1,8 @@
 rules_version = '2';
 
 // Reglas de Caja Árboles: solo pueden entrar las cuentas de Google de la lista.
+// La tienda web (sin login) solo puede LEER los productos marcados para la web,
+// sus fotos y los datos de contacto de la tienda. Nadie de afuera puede escribir.
 // Copia de las reglas publicadas en Firebase (Firestore → Reglas).
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -15,8 +17,24 @@ service cloud.firestore {
         ];
     }
 
+    // la caja: todo, solo para la lista de arriba
     match /{document=**} {
       allow read, write: if permitido();
+    }
+
+    // tienda web: productos marcados "Mostrar en la tienda web"
+    match /productos/{id} {
+      allow read: if resource.data.web == true;
+    }
+
+    // tienda web: la foto de un producto que está en la web
+    match /fotos/{id} {
+      allow get: if get(/databases/$(database)/documents/productos/$(id)).data.web == true;
+    }
+
+    // tienda web: WhatsApp, Instagram y dónde se retira
+    match /config/tienda {
+      allow get: if true;
     }
   }
 }

@@ -279,6 +279,17 @@ td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
 .prow .p{font-weight:800}
 .prow.vendida .n{color:var(--muted)}
 .pedit{grid-column:1/-1;display:flex;flex-direction:column;gap:10px;background:var(--bg);border-radius:14px;padding:12px}
+.webbox{display:flex;flex-direction:column;gap:10px}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0)}
+.filebtn{position:relative;display:inline-flex;align-items:center;justify-content:center;cursor:pointer}
+.filebtn:focus-within{outline:3px solid var(--accent);outline-offset:2px}
+.fotorow{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.fthumb{width:64px;height:64px;border-radius:12px;background:var(--soft);flex:none;display:flex;align-items:center;justify-content:center;color:var(--muted);font-size:12px;overflow:hidden}
+.fthumb:empty::after{content:"Sin foto"}
+.fthumb img{width:100%;height:100%;object-fit:cover}
+a.btn{display:inline-flex;align-items:center;justify-content:center;text-decoration:none;color:var(--ink)}
+.tag.web{background:var(--teal-soft);color:var(--teal)}
+details summary{cursor:pointer;font-weight:700;color:var(--muted);padding:4px 0}
 .preview{background:var(--bg);border-radius:12px;padding:10px 12px;font-size:14px;display:flex;flex-direction:column;gap:4px}
 .check{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700}
 .check input{width:20px;height:20px}
@@ -425,6 +436,8 @@ img{max-width:100%}
               <div class="field"><span class="flabel">Tipo</span><div class="chips" id="nCats"></div></div>
               <div id="nDeBox" hidden><div id="nDe"></div></div>
               <label class="check"><input type="checkbox" id="nUnica"> Pieza única (se saca de la lista al venderse)</label>
+              <label class="check"><input type="checkbox" id="nWeb"> Mostrar en la tienda web</label>
+              <div class="fotorow" id="nFotoRow" hidden><span class="fthumb" id="nFotoPrev"></span><label class="btn soft small filebtn"><span id="nFotoTxt">Agregar foto</span><input type="file" accept="image/*" id="nFoto" class="vh"></label></div>
               <button type="submit" class="btn dark">Agregar a la lista</button>
             </form>
             <div class="card">
@@ -439,6 +452,19 @@ img{max-width:100%}
               <div class="preview num" id="aPreview" hidden></div>
               <button type="button" class="btn dark" id="aBtn" disabled>Aplicar aumento</button>
               <div class="confirm" id="aConfirm" hidden></div>
+            </div>
+            <div class="card">
+              <h2 style="font-size:20px">Tienda web</h2>
+              <div class="hint" id="tInfo"></div>
+              <div class="row"><a class="btn soft small" id="tAbrir" href="tienda/" target="_blank" rel="noopener">Abrir tienda</a><button type="button" class="btn soft small" id="tCopiar">Copiar link</button></div>
+              <details id="tAjustes"><summary>Datos de la tienda</summary>
+                <form id="tForm" autocomplete="off" style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
+                  <div class="field"><label for="tWa">WhatsApp donde llegan los pedidos</label><input type="text" id="tWa" inputmode="tel" placeholder="Ej: 358 4123456"></div>
+                  <div class="field"><label for="tIg">Instagram (opcional)</label><input type="text" id="tIg" placeholder="Ej: arboles.espaciobotanico"></div>
+                  <div class="field"><label for="tRet">Dónde y cuándo se retira (opcional)</label><input type="text" id="tRet" placeholder="Ej: Sobremonte 123, lunes a sábado de 9 a 13"></div>
+                  <button type="submit" class="btn dark">Guardar datos</button>
+                </form>
+              </details>
             </div>
             <div class="card cuenta"><span class="hint" id="cuentaInfo"></span><button type="button" class="btn line small" id="btnSalir">Salir</button></div>
           </div>
@@ -486,7 +512,7 @@ import { firebaseConfig } from "./firebase-config.js";
   const DLBL = Object.fromEntries(DONDES);
   const DCOL = {local:"#1F7A72", redes:"#4E8A3A", feria:"#D9732A"};
   // de quién es la plata de cada cosa: plantas → Fran, arte botánico → Rocío, otros → según el producto
-  const VERSION = "1.5";
+  const VERSION = "1.6";
   const ADMIN = "cornabalta3@gmail.com";
   const DUENOS = ["Fran","Rocío","Los dos"];
   // plantas → Fran, arte botánico → Rocío, otros → según el producto (por defecto, de los dos a medias)
@@ -545,7 +571,13 @@ import { firebaseConfig } from "./firebase-config.js";
     patchVenta(dia, id, p) { return fire(setDoc(doc(this.db, "dias", dia), { fecha: dia, ventas: { [id]: p } }, { merge: true })); },
     async addProd(data) { const ref = doc(collection(this.db, "productos")); fire(setDoc(ref, data)); return ref.id; },
     updateProd(id, p) { return fire(setDoc(doc(this.db, "productos", id), p, { merge: true })); },
-    delProd(id) { return fire(deleteDoc(doc(this.db, "productos", id))); },
+    delProd(id) { fire(deleteDoc(doc(this.db, "fotos", id))); return fire(deleteDoc(doc(this.db, "productos", id))); },
+    // fotos para la tienda web: van aparte (fotos/{id}) para que la lista de precios siga liviana
+    ponerFoto(id, img, ts) { return fire(setDoc(doc(this.db, "fotos", id), { img, ts })); },
+    sacarFoto(id) { return fire(deleteDoc(doc(this.db, "fotos", id))); },
+    async leerFoto(id) { const s = await getDoc(doc(this.db, "fotos", id)); return s.exists() ? s.data().img : null; },
+    async leerTienda() { const s = await getDoc(doc(this.db, "config", "tienda")); return s.exists() ? s.data() : {}; },
+    guardarTienda(t) { return fire(setDoc(doc(this.db, "config", "tienda"), t, { merge: true })); },
     async addCuenta(data) { const ref = doc(collection(this.db, "cuentas")); fire(setDoc(ref, data)); return ref.id; },
     async leerYo() { const s = await getDoc(doc(this.db, "usuarios", FB.user.uid)); return s.exists() ? s.data().nombre : null; },
     borrarVenta(dia, id) { return fire(updateDoc(doc(this.db, "dias", dia), { ["ventas." + id]: deleteField() })); },
@@ -833,10 +865,73 @@ import { firebaseConfig } from "./firebase-config.js";
     const n = $("nNombre").value.trim(), raw = $("nPrecio").value.trim(); const p = raw ? parsePrecio(raw) : null;
     if (!n) { toast("Falta el nombre"); return; } if (raw && !(p > 0)) { toast("Revisá el precio"); return; }
     if (prodList().some(x => !x.vendida && norm(x.n) === norm(n))) { toast("Ya hay un producto con ese nombre"); return; }
-    const data = { n, p, cat: S.nCat, de: S.nCat === "Otro" ? S.nDe : null, unica: $("nUnica").checked, vendida: false, creado: Date.now() };
-    try { const id = await DB.addProd(data); S.prods.set(id, data); $("nNombre").value = ""; $("nPrecio").value = ""; $("nUnica").checked = false; $("nNombre").focus(); toast("Agregado: " + n); render(); } catch (err) { toast(errMsg(err)); } });
+    const web = $("nWeb").checked, foto = web && S.nFoto ? Date.now() : null;
+    const data = { n, p, cat: S.nCat, de: S.nCat === "Otro" ? S.nDe : null, unica: $("nUnica").checked, vendida: false, web, foto, creado: Date.now() };
+    try { const id = await DB.addProd(data); if (foto) { DB.ponerFoto(id, S.nFoto, foto); S.fotos.set(id, S.nFoto); }
+      S.prods.set(id, data); $("nNombre").value = ""; $("nPrecio").value = ""; $("nUnica").checked = false; limpiarNFoto(); $("nNombre").focus(); toast("Agregado: " + n); render(); } catch (err) { toast(errMsg(err)); } });
+
+  // ---------- fotos para la tienda web ----------
+  // Se achican en el celu antes de guardar (lado largo 800 px, JPEG), así cada foto pesa poco.
+  async function achicarFoto(file) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((ok, mal) => { const i = new Image(); i.onload = () => ok(i); i.onerror = mal; i.src = url; });
+      const k = Math.min(1, 800 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas"); c.width = Math.max(1, Math.round(img.naturalWidth * k)); c.height = Math.max(1, Math.round(img.naturalHeight * k));
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      let q = 0.78, out = c.toDataURL("image/jpeg", q);
+      while (out.length > 260000 && q > 0.4) { q -= 0.1; out = c.toDataURL("image/jpeg", q); }
+      return out;
+    } finally { URL.revokeObjectURL(url); }
+  }
+  const thumb = (img) => img ? `<img src="${img}" alt="">` : "";
+  S.fotos = new Map(); S.nFoto = null;
+  function limpiarNFoto() { S.nFoto = null; $("nFoto").value = ""; $("nFotoPrev").innerHTML = ""; $("nFotoTxt").textContent = "Agregar foto"; $("nWeb").checked = false; $("nFotoRow").hidden = true; }
+  $("nWeb").addEventListener("change", () => { $("nFotoRow").hidden = !$("nWeb").checked; });
+  $("nFoto").addEventListener("change", async e => { const f = e.target.files && e.target.files[0]; if (!f) return;
+    try { S.nFoto = await achicarFoto(f); $("nFotoPrev").innerHTML = thumb(S.nFoto); $("nFotoTxt").textContent = "Cambiar foto"; } catch (er) { toast("No se pudo leer esa foto. Probá con otra."); } });
+  function fotoRow(p) { return `<span class="fthumb" id="eFotoPrev">${thumb(S.fotos.get(p.id))}</span>
+    <label class="btn soft small filebtn"><span>${p.foto ? "Cambiar foto" : "Agregar foto"}</span><input type="file" accept="image/*" id="eFoto" class="vh"></label>
+    ${p.foto ? `<button type="button" class="btn line small" data-fotodel="${p.id}">Sacar foto</button>` : ""}`; }
+  async function cargarFoto(id) { const p = S.prods.get(id); if (!p || !p.foto || S.fotos.has(id)) return;
+    try { const img = await DB.leerFoto(id); if (img) { S.fotos.set(id, img); if (S.editing === id && $("eFotoPrev")) $("eFotoPrev").innerHTML = thumb(img); } } catch (e) {} }
+  $("plist").addEventListener("change", async e => {
+    if (e.target.id === "eW") { $("eWebBox").hidden = !e.target.checked; return; }
+    if (e.target.id !== "eFoto" || !S.editing || !S.ready) return;
+    const id = S.editing, f = e.target.files && e.target.files[0]; if (!f) return;
+    try { const img = await achicarFoto(f); const ts = Date.now();
+      DB.ponerFoto(id, img, ts); DB.updateProd(id, { foto: ts }); S.fotos.set(id, img); S.prods.set(id, { ...S.prods.get(id), foto: ts });
+      if (S.editing === id) $("eFotoRow").innerHTML = fotoRow({ id, ...S.prods.get(id) }); toast("Foto guardada"); }
+    catch (er) { toast("No se pudo leer esa foto. Probá con otra."); } });
+
+  // ---------- tienda web: link y datos ----------
+  const TIENDA_URL = new URL("tienda/", location.href).href;
+  S.tienda = {};
+  // deja el número como lo pide WhatsApp: 549 + característica + número, sin 0 ni 15
+  function normWa(s) { let d = String(s || "").replace(/\D/g, ""); if (!d) return "";
+    if (d.startsWith("549")) d = d.slice(3); else if (d.startsWith("54")) d = d.slice(2);
+    d = d.replace(/^0/, "");
+    if (d.length === 12) for (const a of [3, 4, 2]) if (d.substr(a, 2) === "15") { d = d.slice(0, a) + d.slice(a + 2); break; }
+    return d.length === 10 ? "549" + d : null; }
+  function renderTienda() {
+    const n = prodList().filter(p => p.web && !p.vendida).length, sinFoto = prodList().filter(p => p.web && !p.vendida && !p.foto).length;
+    $("tInfo").textContent = !S.tienda.whatsapp ? "Falta el WhatsApp donde llegan los pedidos: cargalo en Datos de la tienda." :
+      !n ? "Todavía no hay productos en la tienda. Tocá Editar en un producto y marcá Mostrar en la tienda web." :
+      `${n} producto${n === 1 ? "" : "s"} en la tienda` + (sinFoto ? ` (${sinFoto} sin foto).` : ".");
+  }
+  function llenarTienda() { $("tWa").value = S.tienda.whatsapp ? "+" + S.tienda.whatsapp : ""; $("tIg").value = S.tienda.instagram || ""; $("tRet").value = S.tienda.retiro || "";
+    if (!S.tienda.whatsapp) $("tAjustes").open = true; renderTienda(); }
+  $("tCopiar").addEventListener("click", async () => { try { await navigator.clipboard.writeText(TIENDA_URL); toast("Link copiado"); } catch (e) { toast(TIENDA_URL); } });
+  $("tForm").addEventListener("submit", e => { e.preventDefault(); if (!S.ready) { toast("Sin conexión con el registro"); return; }
+    const raw = $("tWa").value.trim(), wa = normWa(raw);
+    if (raw && !wa) { toast("Revisá el WhatsApp: característica y número, ej. 358 4123456"); return; }
+    const ig = $("tIg").value.trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/^@/, "").replace(/[/?#].*$/, "");
+    S.tienda = { whatsapp: wa || null, instagram: ig || null, retiro: $("tRet").value.trim() || null };
+    DB.guardarTienda(S.tienda); llenarTienda(); toast("Datos de la tienda guardados"); });
+
   function tagsDe(p) { const c = p.cat || "Otro"; let t = `<span class="tag ${esc(c)}">${esc(CL[c] || "Otro")}</span>`;
-    if (p.unica) t += `<span class="tag gris">Pieza única</span>`; if (p.vendida) t += `<span class="tag warn">Vendida</span>`; return t; }
+    if (p.unica) t += `<span class="tag gris">Pieza única</span>`; if (p.vendida) t += `<span class="tag warn">Vendida</span>`;
+    if (p.web && !p.vendida) t += `<span class="tag web">En la web</span>` + (p.foto ? "" : `<span class="tag gris">Sin foto</span>`); return t; }
   function renderPrecios() {
     const q = norm($("pBuscar").value); const list = prodList().filter(p => (S.pFiltro === "Todos" || (p.cat || "Otro") === S.pFiltro) && (!q || norm(p.n).includes(q)))
       .sort((a, b) => (a.vendida ? 1 : 0) - (b.vendida ? 1 : 0));
@@ -848,13 +943,20 @@ import { firebaseConfig } from "./firebase-config.js";
         <div class="field"><span class="flabel">Tipo</span><div class="chips" id="eCats">${catChips(ec, "data-ecat")}</div></div>
         <div id="eDeBox" hidden></div>
         <label class="check"><input type="checkbox" id="eU" ${p.unica ? "checked" : ""}> Pieza única</label>
+        <label class="check"><input type="checkbox" id="eW" ${p.web ? "checked" : ""}> Mostrar en la tienda web</label>
+        <div class="webbox" id="eWebBox" ${p.web ? "" : "hidden"}>
+          <div class="fotorow" id="eFotoRow">${fotoRow(p)}</div>
+          <div class="field"><label for="eD">Descripción para la web (opcional)</label><input type="text" id="eD" maxlength="160" value="${esc(p.d || "")}" placeholder="Ej: maceta de 12 cm, para interior"></div>
+        </div>
         ${p.vendida ? `<button type="button" class="btn line small" data-revive="${p.id}">Volver a ponerla en venta</button>` : ""}
         <div class="row"><button type="button" class="btn dark" data-save="${p.id}">Guardar</button><button type="button" class="btn soft" data-cancel="1">Cancelar</button><span style="flex:1"></span>
         ${S.delConfirm === p.id ? `<span style="color:var(--red);font-weight:700">¿Borrar ${esc(p.n)}?</span><button type="button" class="btn danger small" data-delyes="${p.id}">Sí, borrar</button>` : `<button type="button" class="btn line small" data-del="${p.id}" style="border-color:var(--red);color:var(--red)">Borrar</button>`}</div></div>`; }
       return h + "</div>"; }).join("");
   }
   $("plist").addEventListener("click", async e => { const t = e.target.closest("button"); if (!t) return;
-    if (t.dataset.edit) { S.editing = S.editing === t.dataset.edit ? null : t.dataset.edit; S.delConfirm = null; renderPrecios(); if (S.editing) $("eP").focus(); return; }
+    if (t.dataset.edit) { S.editing = S.editing === t.dataset.edit ? null : t.dataset.edit; S.delConfirm = null; renderPrecios(); if (S.editing) { $("eP").focus(); cargarFoto(S.editing); } return; }
+    if (t.dataset.fotodel) { if (!S.ready) return; const id = t.dataset.fotodel; DB.sacarFoto(id); DB.updateProd(id, { foto: null }); S.fotos.delete(id);
+      S.prods.set(id, { ...S.prods.get(id), foto: null }); $("eFotoRow").innerHTML = fotoRow({ id, ...S.prods.get(id) }); toast("Foto sacada"); return; }
     if (t.dataset.ecat) { document.querySelectorAll("[data-ecat]").forEach(x => x.setAttribute("aria-pressed", String(x === t))); $("eDeBox").hidden = t.dataset.ecat !== "Otro"; return; }
     if (t.dataset.ede) { document.querySelectorAll("[data-ede]").forEach(x => x.setAttribute("aria-pressed", String(x === t))); return; }
     if (t.dataset.cancel) { S.editing = null; S.delConfirm = null; renderPrecios(); return; }
@@ -867,7 +969,7 @@ import { firebaseConfig } from "./firebase-config.js";
       const de = c === "Otro" ? ((document.querySelector('[data-ede][aria-pressed="true"]') || {}).dataset?.ede || "Los dos") : null;
       if (!n || (rawP && !(p > 0))) { toast("Revisá el nombre y el precio"); return; }
       if (prodList().some(x => x.id !== id && !x.vendida && norm(x.n) === norm(n))) { toast("Ya hay otro producto con ese nombre"); return; }
-      const patch = { n, p, cat: c, de, unica: $("eU").checked };
+      const patch = { n, p, cat: c, de, unica: $("eU").checked, web: $("eW").checked, d: $("eD").value.trim() || null };
       try { await DB.updateProd(id, patch); S.prods.set(id, { ...S.prods.get(id), ...patch }); S.editing = null; toast("Guardado"); render(); } catch (err) { toast(errMsg(err)); } } });
   function aumentoPlan() { const pct = parsePrecio($("aPct").value); if (!(pct > 0) || pct > 500) return null; const sc = $("aScope").value; const red = $("aRedondeo").checked;
     const list = prodList().filter(p => p.p > 0 && !p.vendida && (sc === "todos" || (p.cat || "Otro") === sc)).map(p => { let np = p.p * (1 + pct / 100); np = red ? Math.round(np / 100) * 100 : Math.round(np); return { ...p, np }; });
@@ -893,7 +995,7 @@ import { firebaseConfig } from "./firebase-config.js";
     if (S.tab === "registro") renderRegistro();
     if (S.tab === "cierre") renderCierre();
     if (S.tab === "analisis") renderAnalisis();
-    if (S.tab === "precios") { if (full || !S.editing) renderPrecios(); renderAumento(); }
+    if (S.tab === "precios") { if (full || !S.editing) renderPrecios(); renderAumento(); renderTienda(); }
   }
   function setSync(st, txt) { document.querySelectorAll("[data-dot]").forEach(d => d.className = "dot " + st); document.querySelectorAll("[data-sync]").forEach(d => d.textContent = txt); }
   $("version").textContent = "v" + VERSION;
@@ -985,6 +1087,7 @@ import { firebaseConfig } from "./firebase-config.js";
       cuentas: (arr) => { S.cuentas = arr; render(); },
       err: errDb });
     S.ready = true; if ((user.email || "").toLowerCase() === ADMIN) activarAdmin(); render(true);
+    DB.leerTienda().then(t => { S.tienda = t || {}; llenarTienda(); }).catch(() => {});
     DB.sembrar([["rosario","Rosario"],["fitonia","Fitonia"],["peperomia","Peperomia"],["potus","Potus"],["ficus","Ficus"],["aromaticas","Aromáticas"],["suculentas","Suculentas"],["ala-de-angel","Ala de ángel"],["philodendron","Philodendron"]]).catch(() => {});
   });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

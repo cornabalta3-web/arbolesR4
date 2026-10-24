@@ -1,8 +1,10 @@
 # Caja Árboles
 
-Caja del vivero **Árboles · Espacio Botánico** para Fran y Rocío: anotar ventas en segundos desde el celu o la compu, ver las cuentas entre los dos, el registro de ventas, el análisis del mes y la lista de precios.
+Caja y tienda web del vivero **Árboles · Espacio Botánico** (Río Cuarto) para Fran y Rocío: anotar ventas en segundos desde el celu o la compu, el cierre del día, el registro de ventas, el análisis del mes, la lista de precios y una tienda para que los clientes pidan por WhatsApp.
 
-**Dirección de la app:** https://cornabalta3-web.github.io/arbolesR4/
+**Caja:** https://cornabalta3-web.github.io/arbolesR4/
+
+**Tienda para clientes:** https://cornabalta3-web.github.io/arbolesR4/tienda/
 
 ## Cómo se usa (Fran y Rocío)
 
@@ -10,6 +12,14 @@ Caja del vivero **Árboles · Espacio Botánico** para Fran y Rocío: anotar ven
 2. La primera vez, elegir **quién está cobrando** en ese celu (Fran o Rocío).
 3. Para cobrar: poner el monto, tocar **Planta**, **Arte botánico** u **Otro**, elegir **Efectivo** o **Transferencia** y apretar **Cobrar**.
 4. Para tenerla como app: en iPhone, Compartir → *Agregar a inicio*; en Android, menú ⋮ → *Agregar a la pantalla principal*.
+
+### Tienda web
+
+1. En la caja, **Precios → Tienda web → Datos de la tienda**: cargar el WhatsApp donde llegan los pedidos (y si quieren, Instagram y dónde se retira).
+2. En cada producto que quieran mostrar: **Editar → Mostrar en la tienda web**, sacarle una foto y, si quieren, una descripción corta. Guardar.
+3. Compartir el link con **Copiar link** (Instagram, estados de WhatsApp).
+
+El cliente arma el pedido, elige retiro o envío en Río Cuarto y se abre WhatsApp con todo escrito. Paga por transferencia al alias cuando le confirman.
 
 Si no hay señal (por ejemplo en una feria), la venta se guarda en el celu y se sube sola cuando vuelve internet. Para eso la app tiene que haberse abierto al menos una vez con conexión en ese celu.
 
@@ -36,9 +46,10 @@ Entrar con las tres cuentas de la lista, hacer una venta de prueba desde un celu
 
 ## Cómo está armada
 
-- `index.html`: toda la app (pantallas, cuentas y análisis).
+- `index.html`: toda la caja (pantallas, cierre y análisis).
 - `firebase-config.js`: la conexión con el proyecto de Firebase. No es secreta: la seguridad la dan las reglas.
-- `firestore.rules`: quién puede entrar (solo los mails de la lista).
+- `firestore.rules`: quién puede entrar (solo los mails de la lista) y qué puede leer la tienda.
+- `tienda/index.html`: la tienda para clientes.
 - `sw.js`: guarda una copia de la app para que abra sin señal.
 
 Datos en Firestore:
@@ -46,11 +57,13 @@ Datos en Firestore:
 | Colección | Qué guarda |
 |---|---|
 | `dias/{AAAA-MM-DD}` | Las ventas de cada día: qué, monto, tipo, de quién es la plata, quién cobró, cómo pagó, dónde y nota. |
-| `productos/{id}` | La lista de precios. El precio puede quedar vacío si varía. |
-| `cuentas/{id}` | Cada vez que Fran y Rocío se pasan la plata. |
+| `productos/{id}` | La lista de precios. El precio puede quedar vacío si varía. `web` marca lo que se muestra en la tienda. |
+| `fotos/{id}` | La foto de cada producto para la tienda. |
+| `config/tienda` | WhatsApp, Instagram y dónde se retira. |
+| `cuentas/{id}` | En desuso. |
 | `usuarios/{id}` | Si cada cuenta de Google es de Fran o de Rocío. |
 
-Reglas de las cuentas entre Fran y Rocío: las plantas son de Fran, el arte botánico de Rocío y los otros según el producto. Las transferencias y Mercado Pago van a la cuenta de Fran; el efectivo lo tiene quien cobró.
+Las plantas y los otros son de los dos, el arte botánico es de Rocío. Las transferencias y Mercado Pago van a la cuenta de Fran; el efectivo lo tiene quien cobró.
 
 ## Cómo se actualiza
 

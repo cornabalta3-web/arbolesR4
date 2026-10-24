@@ -1,0 +1,355 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#1F7A72">
+<title>Árboles · Espacio Botánico — Tienda</title>
+<meta name="description" content="Plantas y arte botánico en Río Cuarto. Elegí lo que te gusta y hacé el pedido por WhatsApp: retiro en el local o envío en la ciudad.">
+<meta property="og:type" content="website">
+<meta property="og:title" content="Árboles · Espacio Botánico">
+<meta property="og:description" content="Plantas y arte botánico en Río Cuarto. Pedí por WhatsApp.">
+<meta property="og:image" content="https://cornabalta3-web.github.io/arbolesR4/og.png">
+<meta property="og:url" content="https://cornabalta3-web.github.io/arbolesR4/tienda/">
+<link rel="icon" type="image/png" href="../icon-192.png">
+<link rel="apple-touch-icon" href="../apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Jost:wght@600;700;800&family=Nunito+Sans:wght@400;600;700;800&display=swap">
+<style>
+/* Tienda de Árboles: mismo look que la caja (turquesa del logo sobre blanco cálido, Jost + Nunito Sans).
+   Lo protagónico son las fotos; todo lo demás queda quieto. */
+:root{
+  --bg:#F5F4F0; --surface:#FFFFFF; --ink:#1B1B1B; --muted:#5E615C; --line:#E6E4DF; --soft:#EDEBE5;
+  --accent:#1F7A72; --accent-ink:#FFFFFF; --accent-soft:#E2F0EE; --accent-text:#1F7A72;
+  --planta:#E6F0E1; --planta-ink:#3F6E2F; --arte:#FBEBDD; --arte-ink:#A2501A; --otro:#F3EEDC; --otro-ink:#7A5D12;
+  --wa:#1F7A72;
+  --f-display:"Jost","Trebuchet MS",sans-serif; --f-body:"Nunito Sans","Segoe UI",system-ui,sans-serif;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#121514; --surface:#1B1F1D; --ink:#ECEDE8; --muted:#A3AAA4; --line:#2F3532; --soft:#252A27;
+    --accent:#23887F; --accent-ink:#FFFFFF; --accent-soft:#16312E; --accent-text:#5DBDB3;
+    --planta:#1F2E1C; --planta-ink:#9FD08C; --arte:#3A2618; --arte-ink:#F0A86F; --otro:#352E17; --otro-ink:#E3C46B;
+    color-scheme:dark;
+  }
+  .logo{background:#F5F4F0;border-radius:14px;padding:4px}
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.45}
+button,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance}
+.num{font-variant-numeric:tabular-nums}
+.wrap{max-width:1120px;margin:0 auto;padding:0 max(16px, env(safe-area-inset-right, 0px)) 0 max(16px, env(safe-area-inset-left, 0px))}
+
+/* encabezado */
+header.top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding-top:16px}
+.logo{width:52px;height:64px;object-fit:contain;display:block}
+.ig{display:inline-flex;align-items:center;gap:8px;color:var(--ink);text-decoration:none;font-weight:700;font-size:15px;border:1.5px solid var(--line);border-radius:999px;padding:8px 14px;background:var(--surface)}
+.ig svg{width:18px;height:18px}
+.hero{padding:22px 0 8px}
+.hero h1{font-weight:800;color:var(--accent-text);font-size:clamp(38px, 10.5vw, 76px);line-height:.98;letter-spacing:-.02em;max-width:12ch}
+.hero p{margin:14px 0 0;max-width:46ch;color:var(--muted);font-size:17px}
+
+/* filtros */
+.filtros{position:sticky;top:0;z-index:5;background:var(--bg);padding:14px 0 12px;margin-top:10px}
+.chips{display:flex;gap:8px;overflow-x:auto;scrollbar-width:none;padding-bottom:2px}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:none;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:0 16px;min-height:42px;font-weight:700;font-size:15px}
+.chip[aria-pressed="true"]{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+
+/* catálogo */
+.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:22px 14px;padding:6px 0 40px}
+@media (min-width:700px){.grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:30px 20px}}
+@media (min-width:1024px){.grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.prod{display:flex;flex-direction:column;gap:8px;min-width:0}
+.foto{position:relative;aspect-ratio:4/5;border-radius:18px;overflow:hidden;background:var(--soft)}
+.foto img{width:100%;height:100%;object-fit:cover;display:block}
+.foto.Planta{background:var(--planta);color:var(--planta-ink)} .foto.Arte{background:var(--arte);color:var(--arte-ink)} .foto.Otro{background:var(--otro);color:var(--otro-ink)}
+.foto .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center}
+.foto .ph svg{width:38%;height:38%;opacity:.55}
+.foto .unica{position:absolute;left:10px;top:10px;background:var(--surface);color:var(--ink);font-size:12px;font-weight:800;border-radius:999px;padding:3px 10px}
+.prod h3{font-family:var(--f-body);font-weight:800;font-size:16px;line-height:1.25;overflow-wrap:anywhere}
+.prod .d{color:var(--muted);font-size:14px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.prod .pie{display:flex;flex-direction:column;align-items:stretch;gap:8px;margin-top:auto}
+.prod .pie .step{justify-content:space-between}
+@media (min-width:700px){.prod .pie{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}}
+.precio{font-family:var(--f-display);font-weight:700;font-size:19px}
+.consultar{color:var(--muted);font-size:14px;font-weight:700}
+.add{border:0;background:var(--accent);color:var(--accent-ink);border-radius:12px;min-height:40px;padding:0 14px;font-weight:800;font-size:14px}
+.step{display:inline-flex;align-items:center;border:1.5px solid var(--accent);border-radius:12px;min-height:40px;overflow:hidden}
+.step button{border:0;background:none;width:38px;height:38px;font-size:20px;font-weight:700;color:var(--accent-text)}
+.step span{min-width:22px;text-align:center;font-weight:800}
+.vacio{grid-column:1/-1;text-align:center;color:var(--muted);padding:40px 10px}
+.vacio strong{display:block;color:var(--ink);font-family:var(--f-display);font-size:22px;margin-bottom:6px}
+
+/* cómo comprar / pie */
+.como{border-top:1px solid var(--line);padding:26px 0 calc(120px + env(safe-area-inset-bottom, 0px));display:grid;gap:22px}
+@media (min-width:800px){.como{grid-template-columns:repeat(3,minmax(0,1fr))}}
+.como h2{font-size:19px;margin-bottom:6px}
+.como p{margin:0;color:var(--muted);max-width:40ch}
+.alias{font-family:var(--f-display);font-weight:800;font-size:22px;color:var(--ink)}
+
+/* barra del pedido */
+.barra{position:fixed;left:0;right:0;bottom:0;z-index:10;padding:10px max(16px, env(safe-area-inset-right, 0px)) calc(12px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));pointer-events:none}
+.barra button{pointer-events:auto;width:100%;max-width:560px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:12px;border:0;border-radius:18px;background:var(--accent);color:var(--accent-ink);min-height:60px;padding:0 20px;font-weight:800;font-size:16px;box-shadow:0 6px 24px rgba(20,60,56,.28)}
+.barra .tot{font-family:var(--f-display);font-size:19px}
+
+/* hoja del pedido */
+dialog{border:0;padding:0;background:var(--surface);color:var(--ink);width:100%;max-width:560px;max-height:92vh;border-radius:22px 22px 0 0;margin:auto auto 0}
+dialog::backdrop{background:rgba(18,21,20,.5)}
+@media (min-width:700px){dialog{border-radius:22px;margin:auto}}
+.hoja{display:flex;flex-direction:column;gap:16px;padding:20px max(18px, env(safe-area-inset-right, 0px)) calc(22px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px))}
+.hoja .cab{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.hoja h2{font-size:24px}
+.cerrar{border:0;background:var(--soft);border-radius:999px;min-height:38px;padding:0 14px;font-weight:700}
+.items{display:flex;flex-direction:column}
+.item{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.item:first-child{border-top:0}
+.item .n{font-weight:700;overflow-wrap:anywhere}
+.item .m{color:var(--muted);font-size:14px}
+.total{display:flex;justify-content:space-between;align-items:baseline;gap:10px;border-top:2px solid var(--ink);padding-top:12px}
+.total b{font-family:var(--f-display);font-size:24px}
+.nota{color:var(--muted);font-size:14px;margin:0}
+fieldset{border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:8px}
+legend,.lbl{font-weight:800;font-size:15px;margin-bottom:6px;padding:0}
+.opcion{display:flex;gap:12px;align-items:flex-start;border:1.5px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer}
+.opcion:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+.opcion input{width:20px;height:20px;margin:2px 0 0;accent-color:var(--accent);flex:none}
+.opcion b{display:block}
+.opcion span{color:var(--muted);font-size:14px}
+.campo{display:flex;flex-direction:column;gap:6px}
+.campo input,.campo textarea{width:100%;border:1.5px solid var(--line);border-radius:14px;background:var(--bg);padding:12px 14px;font-size:17px}
+.campo textarea{min-height:76px;resize:vertical}
+.campo input:focus,.campo textarea:focus{outline:none;border-color:var(--accent)}
+.enviar{border:0;border-radius:16px;background:var(--wa);color:#FFFFFF;min-height:58px;font-weight:800;font-size:17px;display:flex;align-items:center;justify-content:center;gap:10px}
+.enviar svg{width:22px;height:22px}
+.enviar:disabled{opacity:.5;cursor:not-allowed}
+.pago{background:var(--bg);border-radius:14px;padding:14px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.pago .alias{font-size:20px}
+.copiar{border:1.5px solid var(--ink);background:var(--surface);border-radius:12px;min-height:40px;padding:0 14px;font-weight:800;font-size:14px}
+.err{color:#B8392B;font-weight:700;font-size:14px;margin:0}
+@media (prefers-color-scheme:dark){.err{color:#E4685B}}
+.listo{text-align:center;display:flex;flex-direction:column;gap:12px;align-items:center;padding:8px 0}
+.listo p{margin:0;color:var(--muted);max-width:36ch}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(90px + env(safe-area-inset-bottom, 0px));background:var(--ink);color:var(--bg);padding:12px 18px;border-radius:14px;font-weight:700;z-index:30;max-width:calc(100% - 32px);text-align:center}
+@media (prefers-reduced-motion:no-preference){
+  .barra button{transition:transform .18s ease}
+  .barra.sube button{animation:sube .28s ease}
+  @keyframes sube{from{transform:translateY(12px);opacity:.6}to{transform:none;opacity:1}}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <img class="logo" src="../logo.png" alt="Árboles · Espacio Botánico">
+    <a class="ig" id="ig" hidden target="_blank" rel="noopener"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1" fill="currentColor"/></svg><span id="igTxt">Instagram</span></a>
+  </header>
+  <section class="hero">
+    <h1>Plantas y arte botánico en Río Cuarto</h1>
+    <p>Elegí lo que te guste y mandanos el pedido por WhatsApp. Lo retirás en el local o te lo llevamos dentro de la ciudad.</p>
+  </section>
+  <div class="filtros" id="filtrosBox" hidden><div class="chips" id="filtros" role="group" aria-label="Qué mostrar"></div></div>
+  <main class="grid" id="grid" aria-live="polite"><div class="vacio"><strong>Cargando…</strong></div></main>
+  <footer class="como">
+    <div><h2>Cómo comprar</h2><p>Agregá productos y tocá Ver pedido. Se abre WhatsApp con el pedido escrito: lo mandás y te confirmamos.</p></div>
+    <div><h2>Retiro o envío</h2><p id="retiroTxt">Retirás en el local o te lo llevamos dentro de Río Cuarto. El envío lo coordinamos por WhatsApp.</p></div>
+    <div><h2>Pago</h2><p>Por transferencia o Mercado Pago al alias, cuando te confirmamos el pedido.</p><div class="alias" style="margin-top:6px">arbolesr4</div><p>Titular: Francisco Corna</p></div>
+  </footer>
+</div>
+<div class="barra" id="barra" hidden><button type="button" id="verPedido"><span id="barraCant"></span><span class="tot num" id="barraTot"></span></button></div>
+<dialog id="hoja" aria-labelledby="hojaTit"><div class="hoja" id="hojaBody"></div></dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-app.js";
+import { getFirestore, collection, doc, getDoc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/12.19.0/firebase-firestore.js";
+import { firebaseConfig } from "../firebase-config.js";
+
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const fmt = new Intl.NumberFormat("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
+const money = (n) => fmt.format(Math.round(n || 0));
+const CATS = [["Planta", "Plantas"], ["Arte", "Arte botánico"], ["Otro", "Otros"]];
+const ICON = {
+  Planta: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 21v-8"/><path d="M12 13c0-4 3-7 8-7 0 4-3 7-8 7z"/><path d="M12 15c0-3-2.5-6-7-6 0 3.5 2.5 6 7 6z"/></svg>',
+  Arte: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><ellipse cx="12" cy="6.6" rx="2.5" ry="3.6" transform="rotate(0 12 12)"/><ellipse cx="12" cy="6.6" rx="2.5" ry="3.6" transform="rotate(72 12 12)"/><ellipse cx="12" cy="6.6" rx="2.5" ry="3.6" transform="rotate(144 12 12)"/><ellipse cx="12" cy="6.6" rx="2.5" ry="3.6" transform="rotate(216 12 12)"/><ellipse cx="12" cy="6.6" rx="2.5" ry="3.6" transform="rotate(288 12 12)"/><circle cx="12" cy="12" r="2" fill="currentColor"/></svg>',
+  Otro: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9h12l-1.5 11h-9z"/><path d="M4.5 9h15"/><path d="M12 9V5"/></svg>'
+};
+const WA_ICON = '<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2c-1.5 0-3-.4-4.3-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5c-.2 0-.4.1-.7.3-.2.3-.9.9-.9 2.2s.9 2.5 1.1 2.7c.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>';
+
+let toastT; function toast(m) { const t = $("toast"); t.textContent = m; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2400); }
+
+const S = { prods: [], cfg: {}, filtro: "todo", pedido: {}, entrega: "retiro", enviado: false };
+// el pedido queda guardado en este celu por si se cierra la página (solo como comodidad)
+try { S.pedido = JSON.parse(localStorage.getItem("tienda.pedido") || "{}") || {}; } catch (e) { S.pedido = {}; }
+try { const f = JSON.parse(localStorage.getItem("tienda.datos") || "{}"); S.datos = f && typeof f === "object" ? f : {}; } catch (e) { S.datos = {}; }
+const guardar = () => { try { localStorage.setItem("tienda.pedido", JSON.stringify(S.pedido)); } catch (e) {} };
+const guardarDatos = () => { try { localStorage.setItem("tienda.datos", JSON.stringify(S.datos)); } catch (e) {} };
+const prod = (id) => S.prods.find(p => p.id === id);
+const lineas = () => Object.entries(S.pedido).map(([id, c]) => ({ p: prod(id), c })).filter(l => l.p && l.c > 0);
+const maxDe = (p) => p.unica ? 1 : 20;
+
+// ---------- catálogo ----------
+function renderFiltros() {
+  const hay = CATS.filter(([c]) => S.prods.some(p => p.cat === c));
+  $("filtrosBox").hidden = hay.length < 2;
+  $("filtros").innerHTML = [["todo", "Todo"], ...hay].map(([c, l]) => `<button type="button" class="chip" data-f="${c}" aria-pressed="${S.filtro === c}">${l}</button>`).join("");
+}
+function pieDe(p) {
+  const c = S.pedido[p.id] || 0;
+  const precio = p.p > 0 ? `<span class="precio num">${money(p.p)}</span>` : `<span class="consultar">Consultar precio</span>`;
+  const accion = c > 0
+    ? `<span class="step"><button type="button" data-menos="${p.id}" aria-label="Sacar uno de ${esc(p.n)}">−</button><span class="num" aria-live="polite">${c}</span><button type="button" data-mas="${p.id}" aria-label="Agregar otro ${esc(p.n)}" ${c >= maxDe(p) ? "disabled" : ""}>+</button></span>`
+    : `<button type="button" class="add" data-mas="${p.id}">Agregar</button>`;
+  return precio + accion;
+}
+function renderGrid() {
+  const list = S.prods.filter(p => S.filtro === "todo" || p.cat === S.filtro);
+  if (!S.prods.length) { const wa = S.cfg.whatsapp ? `<a href="https://wa.me/${esc(S.cfg.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>` : "WhatsApp";
+    $("grid").innerHTML = `<div class="vacio"><strong>Muy pronto</strong>Estamos sacando las fotos. Mientras tanto, escribinos por ${wa}${S.cfg.instagram ? " o Instagram" : ""}.</div>`; return; }
+  $("grid").innerHTML = list.map(p => `<article class="prod" data-id="${p.id}">
+      <div class="foto ${esc(p.cat)}" ${p.foto ? `data-foto="${p.id}"` : ""}><div class="ph">${ICON[p.cat] || ICON.Otro}</div>${p.unica ? `<span class="unica">Pieza única</span>` : ""}</div>
+      <h3>${esc(p.n)}</h3>${p.d ? `<div class="d">${esc(p.d)}</div>` : ""}
+      <div class="pie" id="pie-${p.id}">${pieDe(p)}</div></article>`).join("");
+  mirarFotos();
+}
+const pintarPie = (id) => { const el = $("pie-" + id), p = prod(id); if (el && p) el.innerHTML = pieDe(p); };
+
+// fotos: se piden cuando la tarjeta está por aparecer en pantalla
+const FOTOS = new Map();
+let obs = null;
+function ponerFoto(box, img) { if (!box.querySelector("img")) { const i = new Image(); i.alt = ""; i.decoding = "async"; i.src = img; box.prepend(i); i.onload = () => { const ph = box.querySelector(".ph"); if (ph) ph.remove(); }; } }
+async function traerFoto(box) {
+  const id = box.dataset.foto; if (FOTOS.has(id)) { const img = await FOTOS.get(id); if (img) ponerFoto(box, img); return; }
+  const pr = getDoc(doc(S.db, "fotos", id)).then(s => s.exists() ? s.data().img : null).catch(() => null);
+  FOTOS.set(id, pr); const img = await pr; if (img) ponerFoto(box, img);
+}
+function mirarFotos() {
+  const boxes = document.querySelectorAll("[data-foto]");
+  if (!("IntersectionObserver" in window)) { boxes.forEach(traerFoto); return; }
+  if (obs) obs.disconnect();
+  obs = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { obs.unobserve(e.target); traerFoto(e.target); } }), { rootMargin: "400px 0px" });
+  boxes.forEach(b => obs.observe(b));
+}
+
+$("filtros").addEventListener("click", e => { const b = e.target.closest("[data-f]"); if (!b) return; S.filtro = b.dataset.f; renderFiltros(); renderGrid(); });
+function cambiar(id, d) {
+  const p = prod(id); if (!p) return;
+  const c = Math.max(0, Math.min(maxDe(p), (S.pedido[id] || 0) + d));
+  if (d > 0 && c === (S.pedido[id] || 0)) { toast(p.unica ? "Es una pieza única: hay una sola" : "Para más cantidad, escribinos"); return; }
+  if (c) S.pedido[id] = c; else delete S.pedido[id];
+  guardar(); pintarPie(id); renderBarra(d > 0);
+  if ($("hoja").open) renderHoja();
+}
+document.addEventListener("click", e => {
+  const mas = e.target.closest("[data-mas]"), menos = e.target.closest("[data-menos]");
+  if (mas) cambiar(mas.dataset.mas, 1); else if (menos) cambiar(menos.dataset.menos, -1);
+});
+
+// ---------- barra y hoja del pedido ----------
+const totales = () => { const ls = lineas(); return { ls, cant: ls.reduce((s, l) => s + l.c, 0), tot: ls.reduce((s, l) => s + (l.p.p > 0 ? l.p.p * l.c : 0), 0), consultar: ls.some(l => !(l.p.p > 0)) }; };
+function renderBarra(sube) {
+  const { cant, tot, consultar } = totales();
+  $("barra").hidden = !cant;
+  $("barraCant").textContent = `Ver pedido (${cant})`;
+  $("barraTot").textContent = tot ? money(tot) + (consultar ? " +" : "") : "";
+  if (sube) { $("barra").classList.remove("sube"); void $("barra").offsetWidth; $("barra").classList.add("sube"); }
+}
+function renderHoja() {
+  const B = $("hojaBody");
+  if (S.enviado) {
+    B.innerHTML = `<div class="cab"><h2 id="hojaTit">Pedido listo</h2><button type="button" class="cerrar" data-cerrar>Cerrar</button></div>
+      <div class="listo"><p>Se abrió WhatsApp con tu pedido. Mandá el mensaje y te respondemos para confirmar y coordinar.</p>
+      <p>¿No se abrió? <button type="button" class="copiar" data-reabrir>Abrir WhatsApp de nuevo</button></p>
+      <button type="button" class="copiar" data-otro>Empezar otro pedido</button></div>`;
+    return;
+  }
+  const { ls, tot, consultar } = totales();
+  if (!ls.length) { B.innerHTML = `<div class="cab"><h2 id="hojaTit">Tu pedido</h2><button type="button" class="cerrar" data-cerrar>Cerrar</button></div><p class="nota">Todavía no agregaste nada.</p>`; return; }
+  const retiro = S.cfg.retiro ? esc(S.cfg.retiro) : "Te pasamos la dirección por WhatsApp";
+  const d = S.datos;
+  B.innerHTML = `<div class="cab"><h2 id="hojaTit">Tu pedido</h2><button type="button" class="cerrar" data-cerrar>Seguir mirando</button></div>
+    <div class="items">${ls.map(({ p, c }) => `<div class="item"><div><div class="n">${esc(p.n)}</div><div class="m num">${p.p > 0 ? (c > 1 ? `${c} × ${money(p.p)}` : money(p.p)) : "Consultar precio"}</div></div>
+      <span class="step"><button type="button" data-menos="${p.id}" aria-label="Sacar uno de ${esc(p.n)}">−</button><span class="num">${c}</span><button type="button" data-mas="${p.id}" aria-label="Agregar otro ${esc(p.n)}" ${c >= maxDe(p) ? "disabled" : ""}>+</button></span></div>`).join("")}</div>
+    <div class="total"><span>Total</span><b class="num">${tot ? money(tot) : "A consultar"}</b></div>
+    ${consultar ? `<p class="nota">${tot ? "Sin contar lo que dice “Consultar precio”: ese precio" : "El precio"} te lo confirmamos por WhatsApp.</p>` : ""}
+    <fieldset><legend>¿Cómo lo querés?</legend>
+      <label class="opcion"><input type="radio" name="entrega" value="retiro" ${S.entrega === "retiro" ? "checked" : ""}><div><b>Retiro en el local</b><span>${retiro}</span></div></label>
+      <label class="opcion"><input type="radio" name="entrega" value="envio" ${S.entrega === "envio" ? "checked" : ""}><div><b>Envío en Río Cuarto</b><span>El costo del envío lo coordinamos por WhatsApp.</span></div></label>
+    </fieldset>
+    <div class="campo" id="dirBox" ${S.entrega === "envio" ? "" : "hidden"}><label class="lbl" for="dir">Dirección de entrega</label><input type="text" id="dir" autocomplete="street-address" placeholder="Calle, número y barrio" value="${esc(d.dir || "")}"></div>
+    <div class="campo"><label class="lbl" for="nombre">Tu nombre</label><input type="text" id="nombre" autocomplete="name" value="${esc(d.nombre || "")}"></div>
+    <div class="campo"><label class="lbl" for="nota">¿Algo más? (opcional)</label><textarea id="nota" placeholder="Ej: es para regalo, paso el sábado a la mañana">${esc(d.nota || "")}</textarea></div>
+    <p class="err" id="err" hidden></p>
+    <button type="button" class="enviar" id="enviar">${WA_ICON}Enviar pedido por WhatsApp</button>
+    <div class="pago"><div><div class="nota">Pagás por transferencia o Mercado Pago cuando te confirmamos</div><div class="alias">arbolesr4</div><div class="nota">Titular: Francisco Corna</div></div><button type="button" class="copiar" data-alias>Copiar alias</button></div>`;
+}
+function abrirHoja() { S.enviado = false; renderHoja(); const h = $("hoja"); if (h.showModal) h.showModal(); else h.setAttribute("open", ""); }
+function cerrarHoja() { const h = $("hoja"); if (h.close) h.close(); else h.removeAttribute("open"); }
+$("verPedido").addEventListener("click", abrirHoja);
+$("hoja").addEventListener("click", e => { if (e.target === $("hoja")) cerrarHoja(); });
+$("hoja").addEventListener("input", e => {
+  if (["dir", "nombre", "nota"].includes(e.target.id)) { S.datos[e.target.id] = e.target.value; guardarDatos(); if ($("err")) $("err").hidden = true; }
+});
+$("hoja").addEventListener("change", e => { if (e.target.name === "entrega") { S.entrega = e.target.value; $("dirBox").hidden = S.entrega !== "envio"; if (S.entrega === "envio") $("dir").focus(); } });
+$("hoja").addEventListener("click", async e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.hasAttribute("data-cerrar")) { cerrarHoja(); return; }
+  if (t.hasAttribute("data-alias")) { try { await navigator.clipboard.writeText("arbolesr4"); toast("Alias copiado"); } catch (er) { toast("Alias: arbolesr4"); } return; }
+  if (t.hasAttribute("data-otro")) { S.pedido = {}; guardar(); S.enviado = false; cerrarHoja(); renderGrid(); renderBarra(); return; }
+  if (t.hasAttribute("data-reabrir")) { if (S.ultimoLink) window.open(S.ultimoLink, "_blank", "noopener"); return; }
+  if (t.id === "enviar") enviar();
+});
+
+function mensaje() {
+  const { ls, tot, consultar } = totales(); const d = S.datos;
+  const r = ["¡Hola! Quiero hacer este pedido desde la tienda web:", ""];
+  for (const { p, c } of ls) r.push(`• ${c} × ${p.n}${p.p > 0 ? " — " + money(p.p * c) : " — a consultar"}`);
+  r.push("", `*Total: ${tot ? money(tot) : "a consultar"}*${consultar && tot ? " (más lo que hay que consultar)" : ""}`);
+  r.push(S.entrega === "envio" ? `Entrega: envío a ${String(d.dir || "").trim()}, Río Cuarto` : "Entrega: retiro en el local");
+  r.push(`Nombre: ${String(d.nombre || "").trim()}`);
+  if (String(d.nota || "").trim()) r.push(`Nota: ${String(d.nota).trim()}`);
+  return r.join("\n");
+}
+function enviar() {
+  const err = (m, foco) => { $("err").textContent = m; $("err").hidden = false; if (foco) $(foco).focus(); };
+  if (!S.cfg.whatsapp) { err("Todavía no cargamos el WhatsApp para pedidos. Escribinos por Instagram mientras tanto."); return; }
+  if (S.entrega === "envio" && !String(S.datos.dir || "").trim()) { err("Falta la dirección de entrega.", "dir"); return; }
+  if (!String(S.datos.nombre || "").trim()) { err("Falta tu nombre.", "nombre"); return; }
+  S.ultimoLink = `https://wa.me/${S.cfg.whatsapp}?text=${encodeURIComponent(mensaje())}`;
+  window.open(S.ultimoLink, "_blank", "noopener");
+  S.enviado = true; renderHoja();
+}
+
+// ---------- datos ----------
+async function cargar() {
+  const app = initializeApp(firebaseConfig); S.db = getFirestore(app);
+  const [cfg, snap] = await Promise.all([
+    getDoc(doc(S.db, "config", "tienda")).then(s => s.exists() ? s.data() : {}).catch(() => ({})),
+    getDocs(query(collection(S.db, "productos"), where("web", "==", true)))
+  ]);
+  S.cfg = cfg || {};
+  const orden = { Planta: 0, Arte: 1, Otro: 2 };
+  S.prods = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+    .filter(p => p.n && !p.vendida)
+    .map(p => ({ ...p, cat: orden[p.cat] !== undefined ? p.cat : "Otro" }))
+    .sort((a, b) => (orden[a.cat] - orden[b.cat]) || ((b.foto ? 1 : 0) - (a.foto ? 1 : 0)) || a.n.localeCompare(b.n, "es"));
+  // saca del pedido guardado lo que ya no está (por ejemplo, una pieza única que se vendió)
+  for (const id of Object.keys(S.pedido)) { const p = prod(id); if (!p) delete S.pedido[id]; else S.pedido[id] = Math.min(S.pedido[id], maxDe(p)); }
+  guardar();
+  if (S.cfg.instagram) { $("ig").href = "https://instagram.com/" + encodeURIComponent(S.cfg.instagram); $("igTxt").textContent = "@" + S.cfg.instagram; $("ig").hidden = false; }
+  if (S.cfg.retiro) $("retiroTxt").textContent = `Retirás en ${S.cfg.retiro}, o te lo llevamos dentro de Río Cuarto. El envío lo coordinamos por WhatsApp.`;
+  renderFiltros(); renderGrid(); renderBarra();
+}
+cargar().catch(e => { console.error(e);
+  $("grid").innerHTML = `<div class="vacio"><strong>No se pudo cargar la tienda</strong>Revisá la conexión y volvé a abrir la página.</div>`; });
+</script>
+</body>
+</html>
