@@ -80,6 +80,12 @@ header.top{display:flex;align-items:center;justify-content:space-between;gap:12p
 .prod .pie .step{justify-content:space-between}
 @media (min-width:700px){.prod .pie{flex-direction:row;align-items:center;justify-content:space-between;flex-wrap:wrap}}
 .precio{font-family:var(--f-display);font-weight:700;font-size:19px}
+.precios{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.antes{color:var(--muted);font-size:14px;font-weight:600;text-decoration:line-through}
+.foto .off{position:absolute;right:10px;top:10px;background:var(--accent);color:var(--accent-ink);font-family:var(--f-display);font-size:14px;font-weight:800;border-radius:999px;padding:3px 10px}
+.promo{margin-top:22px;background:var(--accent);color:var(--accent-ink);border-radius:22px;padding:18px 20px;display:flex;align-items:baseline;gap:6px 16px;flex-wrap:wrap}
+.promo b{font-family:var(--f-display);font-weight:800;font-size:clamp(34px, 9vw, 52px);line-height:1;letter-spacing:-.01em}
+.promo span{font-size:16px;font-weight:700;opacity:.92}
 .consultar{color:var(--muted);font-size:14px;font-weight:700}
 .add{border:0;background:var(--accent);color:var(--accent-ink);border-radius:12px;min-height:40px;padding:0 14px;font-weight:800;font-size:14px}
 .step{display:inline-flex;align-items:center;border:1.5px solid var(--accent);border-radius:12px;min-height:40px;overflow:hidden}
@@ -154,6 +160,7 @@ legend,.lbl{font-weight:800;font-size:15px;margin-bottom:6px;padding:0}
   <section class="hero">
     <h1>Plantas y arte botánico en Río Cuarto</h1>
     <p>Elegí lo que te guste y mandanos el pedido por WhatsApp. Lo retirás en el local o te lo llevamos dentro de la ciudad.</p>
+    <div class="promo" id="promo" hidden></div>
   </section>
   <div class="filtros" id="filtrosBox" hidden><div class="chips" id="filtros" role="group" aria-label="Qué mostrar"></div></div>
   <main class="grid" id="grid" aria-live="polite"><div class="vacio"><strong>Cargando…</strong></div></main>
@@ -195,6 +202,20 @@ const guardarDatos = () => { try { localStorage.setItem("tienda.datos", JSON.str
 const prod = (id) => S.prods.find(p => p.id === id);
 const lineas = () => Object.entries(S.pedido).map(([id, c]) => ({ p: prod(id), c })).filter(l => l.p && l.c > 0);
 const maxDe = (p) => p.unica ? 1 : 20;
+// promo cargada en la caja (Precios → Promo): vale hasta el día "hasta" incluido
+const pad = (n) => String(n).padStart(2, "0");
+const hoyKey = () => { const d = new Date(); return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()); };
+const MESES = ["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
+const DIAS = ["domingo","lunes","martes","miércoles","jueves","viernes","sábado"];
+const promo = () => { const p = S.cfg && S.cfg.promo; return p && p.pct > 0 && p.hasta >= hoyKey() ? p : null; };
+const enPromo = (p) => { const pr = promo(); return !!pr && (pr.cats === "todos" || pr.cats === p.cat); };
+const precioDe = (p) => !(p.p > 0) ? 0 : enPromo(p) ? Math.round(p.p * (1 - promo().pct / 100)) : p.p;
+const pctTxt = (pr) => new Intl.NumberFormat("es-AR", { maximumFractionDigits: 1 }).format(pr.pct) + "% off";
+function renderPromo() { const pr = promo(); $("promo").hidden = !pr; if (!pr) return;
+  const [y, m, d] = pr.hasta.split("-").map(Number); const f = new Date(y, m - 1, d);
+  const que = { todos: "en toda la tienda", Planta: "en plantas", Arte: "en arte botánico", Otro: "en otros productos" }[pr.cats] || "";
+  const cuando = pr.hasta === hoyKey() ? "solo por hoy" : `hasta el ${DIAS[f.getDay()]} ${d} de ${MESES[m - 1]}`;
+  $("promo").innerHTML = `<b>${pctTxt(pr)}</b><span>${que}, ${cuando}</span>`; }
 
 // ---------- catálogo ----------
 function renderFiltros() {
@@ -204,7 +225,8 @@ function renderFiltros() {
 }
 function pieDe(p) {
   const c = S.pedido[p.id] || 0;
-  const precio = p.p > 0 ? `<span class="precio num">${money(p.p)}</span>` : `<span class="consultar">Consultar precio</span>`;
+  const precio = !(p.p > 0) ? `<span class="consultar">Consultar precio</span>`
+    : enPromo(p) ? `<span class="precios"><span class="precio num">${money(precioDe(p))}</span><s class="antes num">${money(p.p)}</s></span>` : `<span class="precio num">${money(p.p)}</span>`;
   const accion = c > 0
     ? `<span class="step"><button type="button" data-menos="${p.id}" aria-label="Sacar uno de ${esc(p.n)}">−</button><span class="num" aria-live="polite">${c}</span><button type="button" data-mas="${p.id}" aria-label="Agregar otro ${esc(p.n)}" ${c >= maxDe(p) ? "disabled" : ""}>+</button></span>`
     : `<button type="button" class="add" data-mas="${p.id}">Agregar</button>`;
@@ -215,7 +237,7 @@ function renderGrid() {
   if (!S.prods.length) { const wa = S.cfg.whatsapp ? `<a href="https://wa.me/${esc(S.cfg.whatsapp)}" target="_blank" rel="noopener">WhatsApp</a>` : "WhatsApp";
     $("grid").innerHTML = `<div class="vacio"><strong>Muy pronto</strong>Estamos sacando las fotos. Mientras tanto, escribinos por ${wa}${S.cfg.instagram ? " o Instagram" : ""}.</div>`; return; }
   $("grid").innerHTML = list.map(p => `<article class="prod" data-id="${p.id}">
-      <div class="foto ${esc(p.cat)}" ${p.foto ? `data-foto="${p.id}"` : ""}><div class="ph">${ICON[p.cat] || ICON.Otro}</div>${p.unica ? `<span class="unica">Pieza única</span>` : ""}</div>
+      <div class="foto ${esc(p.cat)}" ${p.foto ? `data-foto="${p.id}"` : ""}><div class="ph">${ICON[p.cat] || ICON.Otro}</div>${p.unica ? `<span class="unica">Pieza única</span>` : ""}${enPromo(p) ? `<span class="off">−${esc(String(promo().pct))}%</span>` : ""}</div>
       <h3>${esc(p.n)}</h3>${p.d ? `<div class="d">${esc(p.d)}</div>` : ""}
       <div class="pie" id="pie-${p.id}">${pieDe(p)}</div></article>`).join("");
   mirarFotos();
@@ -254,7 +276,7 @@ document.addEventListener("click", e => {
 });
 
 // ---------- barra y hoja del pedido ----------
-const totales = () => { const ls = lineas(); return { ls, cant: ls.reduce((s, l) => s + l.c, 0), tot: ls.reduce((s, l) => s + (l.p.p > 0 ? l.p.p * l.c : 0), 0), consultar: ls.some(l => !(l.p.p > 0)) }; };
+const totales = () => { const ls = lineas(); return { ls, cant: ls.reduce((s, l) => s + l.c, 0), tot: ls.reduce((s, l) => s + precioDe(l.p) * l.c, 0), consultar: ls.some(l => !(l.p.p > 0)) }; };
 function renderBarra(sube) {
   const { cant, tot, consultar } = totales();
   $("barra").hidden = !cant;
@@ -276,7 +298,7 @@ function renderHoja() {
   const retiro = S.cfg.retiro ? esc(S.cfg.retiro) : "Te pasamos la dirección por WhatsApp";
   const d = S.datos;
   B.innerHTML = `<div class="cab"><h2 id="hojaTit">Tu pedido</h2><button type="button" class="cerrar" data-cerrar>Seguir mirando</button></div>
-    <div class="items">${ls.map(({ p, c }) => `<div class="item"><div><div class="n">${esc(p.n)}</div><div class="m num">${p.p > 0 ? (c > 1 ? `${c} × ${money(p.p)}` : money(p.p)) : "Consultar precio"}</div></div>
+    <div class="items">${ls.map(({ p, c }) => `<div class="item"><div><div class="n">${esc(p.n)}</div><div class="m num">${p.p > 0 ? (c > 1 ? `${c} × ${money(precioDe(p))}` : money(precioDe(p))) + (enPromo(p) ? ` con ${pctTxt(promo())}` : "") : "Consultar precio"}</div></div>
       <span class="step"><button type="button" data-menos="${p.id}" aria-label="Sacar uno de ${esc(p.n)}">−</button><span class="num">${c}</span><button type="button" data-mas="${p.id}" aria-label="Agregar otro ${esc(p.n)}" ${c >= maxDe(p) ? "disabled" : ""}>+</button></span></div>`).join("")}</div>
     <div class="total"><span>Total</span><b class="num">${tot ? money(tot) : "A consultar"}</b></div>
     ${consultar ? `<p class="nota">${tot ? "Sin contar lo que dice “Consultar precio”: ese precio" : "El precio"} te lo confirmamos por WhatsApp.</p>` : ""}
@@ -311,7 +333,7 @@ $("hoja").addEventListener("click", async e => {
 function mensaje() {
   const { ls, tot, consultar } = totales(); const d = S.datos;
   const r = ["¡Hola! Quiero hacer este pedido desde la tienda web:", ""];
-  for (const { p, c } of ls) r.push(`• ${c} × ${p.n}${p.p > 0 ? " — " + money(p.p * c) : " — a consultar"}`);
+  for (const { p, c } of ls) r.push(`• ${c} × ${p.n}${p.p > 0 ? " — " + money(precioDe(p) * c) + (enPromo(p) ? ` (${pctTxt(promo())})` : "") : " — a consultar"}`);
   r.push("", `*Total: ${tot ? money(tot) : "a consultar"}*${consultar && tot ? " (más lo que hay que consultar)" : ""}`);
   r.push(S.entrega === "envio" ? `Entrega: envío a ${String(d.dir || "").trim()}, Río Cuarto` : "Entrega: retiro en el local");
   r.push(`Nombre: ${String(d.nombre || "").trim()}`);
@@ -346,7 +368,7 @@ async function cargar() {
   guardar();
   if (S.cfg.instagram) { $("ig").href = "https://instagram.com/" + encodeURIComponent(S.cfg.instagram); $("igTxt").textContent = "@" + S.cfg.instagram; $("ig").hidden = false; }
   if (S.cfg.retiro) $("retiroTxt").textContent = `Retirás en ${S.cfg.retiro}, o te lo llevamos dentro de Río Cuarto. El envío lo coordinamos por WhatsApp.`;
-  renderFiltros(); renderGrid(); renderBarra();
+  renderPromo(); renderFiltros(); renderGrid(); renderBarra();
 }
 cargar().catch(e => { console.error(e);
   $("grid").innerHTML = `<div class="vacio"><strong>No se pudo cargar la tienda</strong>Revisá la conexión y volvé a abrir la página.</div>`; });

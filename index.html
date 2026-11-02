@@ -190,6 +190,12 @@ input[type=text].amtin{border:0;background:none;height:52px;padding:0;font-famil
 .pays button[aria-pressed="true"] i{background:#FFFFFF!important}
 .totalbox{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 .totalbox b{font-family:var(--f-display);font-size:30px;font-weight:800;letter-spacing:-.5px}
+.promoline{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:var(--accent-soft);color:var(--teal);border-radius:12px;padding:10px 12px;font-weight:700;font-size:14px}
+.promoline button{border:0;background:none;color:inherit;text-decoration:underline;font-weight:700;font-size:14px;padding:4px 0}
+.promoline.off{background:var(--soft);color:var(--muted)}
+.tile .off{font-size:11px;font-weight:800;margin-left:4px;opacity:.8}
+.promoon{display:flex;flex-direction:column;gap:8px;background:var(--accent-soft);border-radius:14px;padding:14px}
+.promoon b{font-family:var(--f-display);font-size:22px;color:var(--teal)}
 .cobrar{border:0;border-radius:18px;background:var(--accent);color:#FFFFFF;min-height:64px;font-family:var(--f-display);font-weight:800;font-size:24px;width:100%}
 .cobrar:disabled{background:var(--accent-dis);cursor:not-allowed}
 .hoycard{background:var(--fill);color:var(--on-fill);border-radius:20px;padding:20px;display:flex;flex-direction:column;gap:12px}
@@ -359,6 +365,7 @@ img{max-width:100%}
               <div class="chips" role="group" aria-labelledby="dondeLbl" id="donde"></div>
               <div class="field"><label for="nota">Nota (opcional)</label><input type="text" id="nota" placeholder="Ej: seña del encargo de Laura"></div>
               <div class="totalbox"><span class="flabel">Total</span><b class="num" id="total">$ 0</b></div>
+              <div class="promoline" id="promoLine" hidden></div>
               <button type="button" class="mlink" id="otroMonto">¿Cobraste otro monto? (descuento, redondeo)</button>
               <div class="row" id="otroBox" hidden>
                 <div class="field grow"><label for="cobrado">Lo que pagó ($)</label><input type="text" id="cobrado" inputmode="decimal" class="num" placeholder="Ej: 28.000"></div>
@@ -441,6 +448,20 @@ img{max-width:100%}
               <button type="submit" class="btn dark">Agregar a la lista</button>
             </form>
             <div class="card">
+              <h2 style="font-size:20px">Promo</h2>
+              <div class="promoon" id="promoOn" hidden></div>
+              <form id="promoForm" autocomplete="off" style="display:flex;flex-direction:column;gap:12px">
+                <div class="hint">Baja los precios por unos días, en la caja y en la tienda web. La lista de precios no cambia.</div>
+                <div class="row">
+                  <div class="field" style="width:120px"><label for="prPct">Descuento %</label><input type="text" id="prPct" inputmode="decimal" class="num" placeholder="20"></div>
+                  <div class="field grow"><label for="prCats">En qué productos</label>
+                    <select id="prCats"><option value="todos">Todos</option><option value="Planta">Solo plantas</option><option value="Arte">Solo arte botánico</option><option value="Otro">Solo otros</option></select></div>
+                </div>
+                <div class="field"><label for="prHasta">Hasta (incluido)</label><input type="date" id="prHasta"></div>
+                <button type="submit" class="btn dark">Activar promo</button>
+              </form>
+            </div>
+            <div class="card">
               <h2 style="font-size:20px">Aumentar precios</h2>
               <div class="hint">Sube varios precios de una vez. Las ventas ya hechas no cambian.</div>
               <div class="row">
@@ -512,7 +533,7 @@ import { firebaseConfig } from "./firebase-config.js";
   const DLBL = Object.fromEntries(DONDES);
   const DCOL = {local:"#1F7A72", redes:"#4E8A3A", feria:"#D9732A"};
   // de quién es la plata de cada cosa: plantas → Fran, arte botánico → Rocío, otros → según el producto
-  const VERSION = "1.6";
+  const VERSION = "1.7";
   const ADMIN = "cornabalta3@gmail.com";
   const DUENOS = ["Fran","Rocío","Los dos"];
   // plantas → Fran, arte botánico → Rocío, otros → según el producto (por defecto, de los dos a medias)
@@ -565,6 +586,7 @@ import { firebaseConfig } from "./firebase-config.js";
       onSnapshot(query(collection(db, "dias"), where("fecha", ">=", dayKey(corte))), meta, s => h.dias(new Map(s.docs.map(d => [d.id, d.data()])), s.metadata), h.err);
       onSnapshot(collection(db, "productos"), s => h.prods(new Map(s.docs.map(d => [d.id, d.data()]))), h.err);
       onSnapshot(collection(db, "cuentas"), s => h.cuentas(s.docs.map(d => ({ id: d.id, ...d.data() }))), h.err);
+      onSnapshot(doc(db, "config", "tienda"), s => h.tienda(s.exists() ? s.data() : {}), () => {});
       return true;
     },
     saveVenta(dia, id, v) { return fire(setDoc(doc(this.db, "dias", dia), { fecha: dia, ventas: { [id]: v } }, { merge: true })); },
@@ -652,7 +674,7 @@ import { firebaseConfig } from "./firebase-config.js";
     const q = $("q").value.trim(); const sold = vendidos();
     let list = matches(); if (!q) list = list.sort((a, b) => (sold.get(norm(b.n)) || 0) - (sold.get(norm(a.n)) || 0) || String(a.n).localeCompare(String(b.n), "es"));
     const max = q ? 40 : (window.innerWidth < 600 ? 6 : 12); const shown = list.slice(0, max);
-    $("tiles").innerHTML = shown.map(p => `<button type="button" class="tile ${esc(p.cat || "Otro")}" data-pid="${p.id}"><span class="n">${esc(p.n)}</span>${p.p > 0 ? `<span class="p num">${money(p.p)}</span>` : `<span class="var">Precio a elegir</span>`}</button>`).join("");
+    $("tiles").innerHTML = shown.map(p => `<button type="button" class="tile ${esc(p.cat || "Otro")}" data-pid="${p.id}"><span class="n">${esc(p.n)}</span>${p.p > 0 ? (enPromo(p.cat) ? `<span class="p num">${money(conPromo(p.p))}<span class="off">−${promoActiva().pct}%</span></span>` : `<span class="p num">${money(p.p)}</span>`) : `<span class="var">Precio a elegir</span>`}</button>`).join("");
     $("tilesHint").textContent = !S.prods.size ? "Cuando carguen productos en Precios, aparecen acá para tocarlos. Igual se puede vender poniendo solo el monto." :
       q && !list.length ? "No está en la lista. Escribí el nombre y el monto arriba." : list.length > max ? `Mostrando ${max} de ${list.length}. Buscá para ver el resto.` : "";
   }
@@ -701,9 +723,24 @@ import { firebaseConfig } from "./firebase-config.js";
   $("addLine").addEventListener("click", () => { S.lines.push(nuevaLinea()); renderLines(); focusAmt(S.lines.length - 1); });
   const lineasValidas = () => S.lines.filter(l => !lineaVacia(l));
   const lista = () => lineasValidas().reduce((s, l) => s + (l.p > 0 ? l.c * l.p : 0), 0);
-  const aCobrar = () => (S.cobrado > 0 ? S.cobrado : lista());
+  // ---------- promo (Precios → Promo): se aplica sola mientras está vigente ----------
+  S.sinPromo = false; // "no aplicar" en esta venta
+  const promoActiva = () => { const p = S.tienda && S.tienda.promo; return p && p.pct > 0 && p.hasta >= hoy() ? p : null; };
+  const enPromo = (cat, pr = promoActiva()) => !!pr && (pr.cats === "todos" || pr.cats === (CATS.includes(cat) ? cat : "Otro"));
+  const conPromo = (precio, pr = promoActiva()) => Math.round(precio * (1 - pr.pct / 100));
+  const promoTxt = (pr) => `${plain(pr.pct)}% off ${pr.cats === "todos" ? "en todo" : "en " + CLP[pr.cats].toLowerCase()}`;
+  const descPromo = () => { const pr = promoActiva(); if (!pr || S.sinPromo) return 0;
+    return Math.round(lineasValidas().reduce((s, l) => s + (l.p > 0 && enPromo(l.cat, pr) ? l.c * l.p * pr.pct / 100 : 0), 0)); };
+  const aCobrar = () => (S.cobrado > 0 ? S.cobrado : lista() - descPromo());
+  function renderPromoLine() { const pr = promoActiva(), L = lista(), d = descPromo(), el = $("promoLine");
+    const aplica = pr && lineasValidas().some(l => enPromo(l.cat, pr));
+    el.hidden = !aplica || S.cobrado > 0; if (el.hidden) return;
+    el.className = "promoline" + (S.sinPromo ? " off" : "");
+    el.innerHTML = S.sinPromo ? `<span>Promo ${esc(promoTxt(pr))}: no se aplica en esta venta</span><button type="button" id="promoSi">Aplicar</button>`
+      : `<span class="num">Promo ${esc(promoTxt(pr))}: −${money(d)} (lista ${money(L)})</span><button type="button" id="promoNo">No aplicar</button>`; }
+  $("promoLine").addEventListener("click", e => { if (e.target.id === "promoNo") S.sinPromo = true; else if (e.target.id === "promoSi") S.sinPromo = false; else return; updTotal(); });
   function updTotal() {
-    const L = lista(); $("total").textContent = money(L);
+    const L = lista(); $("total").textContent = money(L - descPromo()); renderPromoLine();
     $("descTxt").textContent = S.cobrado > 0 && L > 0 && Math.round(S.cobrado) !== Math.round(L) ? (S.cobrado < L ? `Descuento de ${money(L - S.cobrado)}` : `${money(S.cobrado - L)} más que la lista`) : "";
     updCobrar();
   }
@@ -716,12 +753,14 @@ import { firebaseConfig } from "./firebase-config.js";
     $("cobrarHint").textContent = !S.ready ? "Sin conexión con el registro: todavía no se puede guardar." : !S.yo ? "Arriba, elegí quién está cobrando." :
       !ls.length ? "Poné el monto o tocá un producto de la lista." : falta ? `Poné el monto de ${falta.n || "la venta"}.` : !S.medio ? "Elegí cómo pagó." : `Cobra ${S.yo}. Se guarda al instante y lo ven los dos.`;
   }
-  function resetVenta() { S.lines = [nuevaLinea()]; S.medio = null; S.donde = "local"; S.cobrado = null; $("nota").value = ""; $("cobrado").value = ""; $("otroBox").hidden = true; renderPays(); renderDonde(); renderLines(); renderTiles(); }
+  function resetVenta() { S.sinPromo = false; S.lines = [nuevaLinea()]; S.medio = null; S.donde = "local"; S.cobrado = null; $("nota").value = ""; $("cobrado").value = ""; $("otroBox").hidden = true; renderPays(); renderDonde(); renderLines(); renderTiles(); }
   $("cobrar").addEventListener("click", async () => {
     const ls = lineasValidas(); if (!S.ready || !S.yo || !ls.length || ls.some(l => !(l.p > 0)) || !S.medio) return;
     const items = ls.map(l => { const it = { n: String(l.n).trim(), c: l.c, p: l.p, cat: l.cat }; it.de = dueno({ ...it, de: l.de }); if (l.pid) it.pid = l.pid; return it; });
     const L = items.reduce((s, it) => s + it.c * it.p, 0);
-    const v = { ts: Date.now(), items, lista: L, total: S.cobrado > 0 ? S.cobrado : L, medio: S.medio, cobro: S.yo, donde: S.donde, nota: $("nota").value.trim() || null };
+    const dP = S.cobrado > 0 ? 0 : descPromo();
+    const v = { ts: Date.now(), items, lista: L, total: S.cobrado > 0 ? S.cobrado : L - dP, medio: S.medio, cobro: S.yo, donde: S.donde, nota: $("nota").value.trim() || null };
+    if (dP > 0) v.promo = promoActiva().pct;
     if (S.admin && S.prueba) v.prueba = true;
     const id = "v" + v.ts.toString(36) + Math.random().toString(36).slice(2, 6);
     const unicas = ls.filter(l => l.pid && l.unica).map(l => l.pid);
@@ -753,7 +792,7 @@ import { firebaseConfig } from "./firebase-config.js";
     return ventas().filter(v => v.dia >= a && v.dia <= b && (!q || (v.items || []).some(it => norm(it.n || CL[it.cat]).includes(q)) || norm(v.nota).includes(q))); }
   function saleHTML(v) { const key = v.dia + "|" + v.id; const desc = (v.lista || listaDe(v)) - (v.total || 0);
     let h = `<div class="sale${v.anulada ? " void" : ""}"><span class="h num">${hora(v.ts)}</span><div><div class="it">${esc(itemsTxt(v))}</div>
-      <div class="meta"><span class="tag ${esc(v.medio)}">${esc(MLBL[v.medio])}</span><span>cobró ${esc(v.cobro)}</span>${v.donde && v.donde !== "local" ? `<span class="tag gris">${esc(DLBL[v.donde] || v.donde)}</span>` : ""}${desc > 0.5 ? `<span>· descuento ${money(desc)}</span>` : ""}${v.anulada ? '<span class="tag warn">Anulada</span>' : ""}${v.prueba ? '<span class="tag gris">Prueba</span>' : ""}${v.nota ? "<span>· " + esc(v.nota) + "</span>" : ""}</div>
+      <div class="meta"><span class="tag ${esc(v.medio)}">${esc(MLBL[v.medio])}</span><span>cobró ${esc(v.cobro)}</span>${v.donde && v.donde !== "local" ? `<span class="tag gris">${esc(DLBL[v.donde] || v.donde)}</span>` : ""}${desc > 0.5 ? `<span>· ${v.promo ? `promo ${plain(v.promo)}% (−${money(desc)})` : `descuento ${money(desc)}`}</span>` : ""}${v.anulada ? '<span class="tag warn">Anulada</span>' : ""}${v.prueba ? '<span class="tag gris">Prueba</span>' : ""}${v.nota ? "<span>· " + esc(v.nota) + "</span>" : ""}</div>
       ${v.anulada ? `<button type="button" class="mlink" data-restore="${key}">Restaurar</button>` : `<button type="button" class="mlink" data-void="${key}">Anular</button>`}</div><b class="amt2 num">${money(v.total)}</b>`;
     if (S.confirming === key) h += `<div class="confirm">¿Anular esta venta de ${money(v.total)}? <button type="button" class="btn danger small" data-yes="${key}">Sí, anular</button><button type="button" class="btn soft small" data-no="1">No</button></div>`;
     return h + "</div>"; }
@@ -919,15 +958,31 @@ import { firebaseConfig } from "./firebase-config.js";
       !n ? "Todavía no hay productos en la tienda. Tocá Editar en un producto y marcá Mostrar en la tienda web." :
       `${n} producto${n === 1 ? "" : "s"} en la tienda` + (sinFoto ? ` (${sinFoto} sin foto).` : ".");
   }
-  function llenarTienda() { $("tWa").value = S.tienda.whatsapp ? "+" + S.tienda.whatsapp : ""; $("tIg").value = S.tienda.instagram || ""; $("tRet").value = S.tienda.retiro || "";
-    if (!S.tienda.whatsapp) $("tAjustes").open = true; renderTienda(); }
+  let tAbierto = false;
+  function llenarTienda() { renderPromo(); if ($("tForm").contains(document.activeElement)) { renderTienda(); return; } $("tWa").value = S.tienda.whatsapp ? "+" + S.tienda.whatsapp : ""; $("tIg").value = S.tienda.instagram || ""; $("tRet").value = S.tienda.retiro || "";
+    if (!S.tienda.whatsapp && !tAbierto) { $("tAjustes").open = true; tAbierto = true; } renderTienda(); }
   $("tCopiar").addEventListener("click", async () => { try { await navigator.clipboard.writeText(TIENDA_URL); toast("Link copiado"); } catch (e) { toast(TIENDA_URL); } });
   $("tForm").addEventListener("submit", e => { e.preventDefault(); if (!S.ready) { toast("Sin conexión con el registro"); return; }
     const raw = $("tWa").value.trim(), wa = normWa(raw);
     if (raw && !wa) { toast("Revisá el WhatsApp: característica y número, ej. 358 4123456"); return; }
     const ig = $("tIg").value.trim().replace(/^https?:\/\/(www\.)?instagram\.com\//i, "").replace(/^@/, "").replace(/[/?#].*$/, "");
-    S.tienda = { whatsapp: wa || null, instagram: ig || null, retiro: $("tRet").value.trim() || null };
-    DB.guardarTienda(S.tienda); llenarTienda(); toast("Datos de la tienda guardados"); });
+    const datos = { whatsapp: wa || null, instagram: ig || null, retiro: $("tRet").value.trim() || null };
+    S.tienda = { ...S.tienda, ...datos }; DB.guardarTienda(datos); llenarTienda(); toast("Datos de la tienda guardados"); });
+
+  // ---------- promo: activar / terminar ----------
+  const proxDomingo = () => { const d = new Date(); d.setDate(d.getDate() + ((7 - d.getDay()) % 7)); return dayKey(d); };
+  function renderPromo() { const pr = promoActiva(); $("promoOn").hidden = !pr; $("promoForm").hidden = !!pr;
+    if (pr) $("promoOn").innerHTML = `<b>${esc(promoTxt(pr))}</b><span>Hasta el ${esc(diaLargo(pr.hasta).toLowerCase())}, en la caja y en la tienda web. Se termina sola.</span>
+      <button type="button" class="btn line small" id="prFin" style="align-self:flex-start">Terminar promo ahora</button>`;
+    else if (!$("prHasta").value) $("prHasta").value = proxDomingo(); }
+  $("promoForm").addEventListener("submit", e => { e.preventDefault(); if (!S.ready) { toast("Sin conexión con el registro"); return; }
+    const pct = parsePrecio($("prPct").value), hasta = $("prHasta").value;
+    if (!(pct > 0 && pct <= 90)) { toast("Poné el descuento, por ejemplo 20"); return; }
+    if (!hasta || hasta < hoy()) { toast("Elegí hasta qué día dura"); return; }
+    const promo = { pct, cats: $("prCats").value, hasta, desde: hoy() };
+    S.tienda = { ...S.tienda, promo }; DB.guardarTienda({ promo }); $("prPct").value = ""; toast("Promo activada: " + promoTxt(promo)); render(true); });
+  $("promoOn").addEventListener("click", e => { if (e.target.id !== "prFin" || !S.ready) return;
+    S.tienda = { ...S.tienda, promo: null }; DB.guardarTienda({ promo: null }); $("prHasta").value = ""; toast("Promo terminada"); render(true); });
 
   function tagsDe(p) { const c = p.cat || "Otro"; let t = `<span class="tag ${esc(c)}">${esc(CL[c] || "Otro")}</span>`;
     if (p.unica) t += `<span class="tag gris">Pieza única</span>`; if (p.vendida) t += `<span class="tag warn">Vendida</span>`;
@@ -995,7 +1050,7 @@ import { firebaseConfig } from "./firebase-config.js";
     if (S.tab === "registro") renderRegistro();
     if (S.tab === "cierre") renderCierre();
     if (S.tab === "analisis") renderAnalisis();
-    if (S.tab === "precios") { if (full || !S.editing) renderPrecios(); renderAumento(); renderTienda(); }
+    if (S.tab === "precios") { if (full || !S.editing) renderPrecios(); renderAumento(); renderTienda(); renderPromo(); }
   }
   function setSync(st, txt) { document.querySelectorAll("[data-dot]").forEach(d => d.className = "dot " + st); document.querySelectorAll("[data-sync]").forEach(d => d.textContent = txt); }
   $("version").textContent = "v" + VERSION;
@@ -1085,9 +1140,9 @@ import { firebaseConfig } from "./firebase-config.js";
       dias: (m, md) => { S.dias = m; setSync(md.fromCache ? "off" : "on", md.fromCache ? "Sin señal: se guarda en el celu" : md.hasPendingWrites ? "Subiendo…" : "Al día"); render(); },
       prods: (m) => { S.prods = m; render(); },
       cuentas: (arr) => { S.cuentas = arr; render(); },
+      tienda: (t) => { S.tienda = t || {}; llenarTienda(); render(); if (S.tab === "vender") updTotal(); },
       err: errDb });
     S.ready = true; if ((user.email || "").toLowerCase() === ADMIN) activarAdmin(); render(true);
-    DB.leerTienda().then(t => { S.tienda = t || {}; llenarTienda(); }).catch(() => {});
     DB.sembrar([["rosario","Rosario"],["fitonia","Fitonia"],["peperomia","Peperomia"],["potus","Potus"],["ficus","Ficus"],["aromaticas","Aromáticas"],["suculentas","Suculentas"],["ala-de-angel","Ala de ángel"],["philodendron","Philodendron"]]).catch(() => {});
   });
   if ("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(() => {});

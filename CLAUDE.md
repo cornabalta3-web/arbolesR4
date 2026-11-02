@@ -37,13 +37,14 @@ App de caja y tienda web del vivero **Árboles · Espacio Botánico** (Río Cuar
 - **Tienda web:** catálogo con los productos marcados "Mostrar en la tienda web" en Precios (se ocultan las piezas únicas vendidas). Carrito → abre WhatsApp con el pedido escrito (productos, total, retiro en el local o envío en Río Cuarto con dirección, nombre, nota). Pago por transferencia al alias arbolesr4 (Francisco Corna) cuando confirman. Precio vacío = "Consultar precio". El envío se coordina por WhatsApp (no hay costo cargado). No se guardan pedidos en Firestore.
 - **Fotos:** se suben desde Precios (editar producto o al agregarlo, con "Mostrar en la tienda web" marcado); se achican en el celu a 800 px JPEG y se guardan en `fotos/{id}` (sin Firebase Storage, para no pasar a plan pago).
 - **Datos de la tienda** (Precios → Tienda web → Datos de la tienda): WhatsApp donde llegan los pedidos (se guarda como 549 + característica + número), Instagram y dónde/cuándo se retira. Los pueden cambiar Fran o Rocío.
+- **Promo** (Precios → Promo): % off en todo o en un tipo, hasta un día (por defecto el domingo). Se guarda en `config/tienda.promo` y la ven en vivo los dos celus y la tienda. En Vender se aplica sola (los botones muestran el precio con descuento, línea "Promo… · No aplicar" debajo del total); la venta guarda `lista` (precio normal), `total` (con descuento) y `promo: pct`. Se termina sola al pasar la fecha o con "Terminar promo ahora". En la tienda: cartel arriba, precio tachado y "−20%" en la foto.
 - **Modo oscuro:** botón luna/sol arriba a la derecha; se guarda por dispositivo (`caja.tema`) y por defecto sigue al celu. Todo color va por variables CSS (`--fill`/`--on-fill` para los bloques oscuros); no usar colores fijos nuevos.
 
 ## Datos en Firestore
-- `dias/{AAAA-MM-DD}`: `{ fecha, ventas: { [id]: { ts, items:[{n,c,p,cat,de,pid?}], lista, total, medio, cobro, donde, nota, anulada?, prueba? } } }`
+- `dias/{AAAA-MM-DD}`: `{ fecha, ventas: { [id]: { ts, items:[{n,c,p,cat,de,pid?}], lista, total, medio, cobro, donde, nota, anulada?, prueba?, promo? } } }`
 - `productos/{id}`: `{ n, p|null, cat, de: "Fran"|"Rocío"|"Los dos"|null, unica, vendida, creado, web?, d?, foto?: ts|null }` (`d` = descripción para la web)
 - `fotos/{id}`: `{ img: dataURL JPEG, ts }` (mismo id que el producto)
-- `config/tienda`: `{ whatsapp: "549..."|null, instagram|null, retiro|null }`
+- `config/tienda`: `{ whatsapp: "549..."|null, instagram|null, retiro|null, promo?: { pct, cats: "todos"|"Planta"|"Arte"|"Otro", hasta: "AAAA-MM-DD", desde }|null }`
 - `config/semilla`: marca de que ya se cargaron las plantas iniciales
 - `cuentas/{id}`: en desuso (antes guardaba cuando se pasaban la plata)
 - `usuarios/{uid}`: `{ nombre: "Fran"|"Rocío", email }`
