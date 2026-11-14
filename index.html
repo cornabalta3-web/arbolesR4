@@ -278,12 +278,16 @@ td.r,th.r{text-align:right;font-variant-numeric:tabular-nums}
 
 /* precios */
 .plist{display:flex;flex-direction:column}
-.prow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
+.prow{display:grid;grid-template-columns:minmax(0,1fr) auto auto auto;gap:10px;align-items:center;padding:12px 0;border-top:1px solid var(--line)}
 .prow:first-child{border-top:0}
 .prow .n{font-weight:700;overflow-wrap:anywhere}
 .prow .tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:3px}
 .prow .p{font-weight:800}
 .prow.vendida .n{color:var(--muted)}
+.qfoto{width:40px;height:40px;padding:0;border-radius:50%}
+.qfoto svg{width:20px;height:20px}
+.qfoto.tiene{color:var(--muted)}
+.qfoto.subiendo{opacity:.5;pointer-events:none}
 .pedit{grid-column:1/-1;display:flex;flex-direction:column;gap:10px;background:var(--bg);border-radius:14px;padding:12px}
 .webbox{display:flex;flex-direction:column;gap:10px}
 .vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;clip:rect(0 0 0 0)}
@@ -443,8 +447,8 @@ img{max-width:100%}
               <div class="field"><span class="flabel">Tipo</span><div class="chips" id="nCats"></div></div>
               <div id="nDeBox" hidden><div id="nDe"></div></div>
               <label class="check"><input type="checkbox" id="nUnica"> Pieza única (se saca de la lista al venderse)</label>
-              <label class="check"><input type="checkbox" id="nWeb"> Mostrar en la tienda web</label>
-              <div class="fotorow" id="nFotoRow" hidden><span class="fthumb" id="nFotoPrev"></span><label class="btn soft small filebtn"><span id="nFotoTxt">Agregar foto</span><input type="file" accept="image/*" id="nFoto" class="vh"></label></div>
+              <label class="check"><input type="checkbox" id="nWeb" checked> Mostrar en la tienda web</label>
+              <div class="fotorow" id="nFotoRow"><span class="fthumb" id="nFotoPrev"></span><label class="btn soft small filebtn"><span id="nFotoTxt">Agregar foto</span><input type="file" accept="image/*" id="nFoto" class="vh"></label></div>
               <button type="submit" class="btn dark">Agregar a la lista</button>
             </form>
             <div class="card">
@@ -477,6 +481,8 @@ img{max-width:100%}
             <div class="card">
               <h2 style="font-size:20px">Tienda web</h2>
               <div class="hint" id="tInfo"></div>
+              <button type="button" class="btn dark small" id="tTodos" hidden></button>
+              <div class="confirm" id="tTodosOk" hidden></div>
               <div class="row"><a class="btn soft small" id="tAbrir" href="tienda/" target="_blank" rel="noopener">Abrir tienda</a><button type="button" class="btn soft small" id="tCopiar">Copiar link</button></div>
               <details id="tAjustes"><summary>Datos de la tienda</summary>
                 <form id="tForm" autocomplete="off" style="display:flex;flex-direction:column;gap:12px;margin-top:12px">
@@ -533,7 +539,7 @@ import { firebaseConfig } from "./firebase-config.js";
   const DLBL = Object.fromEntries(DONDES);
   const DCOL = {local:"#1F7A72", redes:"#4E8A3A", feria:"#D9732A"};
   // de quién es la plata de cada cosa: plantas → Fran, arte botánico → Rocío, otros → según el producto
-  const VERSION = "1.7";
+  const VERSION = "1.8";
   const ADMIN = "cornabalta3@gmail.com";
   const DUENOS = ["Fran","Rocío","Los dos"];
   // plantas → Fran, arte botánico → Rocío, otros → según el producto (por defecto, de los dos a medias)
@@ -896,7 +902,7 @@ import { firebaseConfig } from "./firebase-config.js";
   const renderNuevo = () => { $("nCats").innerHTML = catChips(S.nCat, "data-ncat"); $("nDe").innerHTML = deChips(S.nDe, "data-nde"); $("nDeBox").hidden = S.nCat !== "Otro"; };
   $("nCats").addEventListener("click", e => { const b = e.target.closest("[data-ncat]"); if (!b) return; S.nCat = b.dataset.ncat; renderNuevo(); });
   $("nDe").addEventListener("click", e => { const b = e.target.closest("[data-nde]"); if (!b) return; S.nDe = b.dataset.nde; renderNuevo(); });
-  const filtroChips = () => ["Todos", ...CATS].map(c => `<button type="button" class="chip" data-pf="${c}" aria-pressed="${c === S.pFiltro}">${c === "Todos" ? "Todos" : CL[c]}</button>`).join("");
+  const filtroChips = () => ["Todos", ...CATS, "SinFoto"].map(c => `<button type="button" class="chip" data-pf="${c}" aria-pressed="${c === S.pFiltro}">${c === "Todos" ? "Todos" : c === "SinFoto" ? "Sin foto" : CL[c]}</button>`).join("");
   $("pFiltro").innerHTML = filtroChips();
   $("pFiltro").addEventListener("click", e => { const b = e.target.closest("[data-pf]"); if (!b) return; S.pFiltro = b.dataset.pf; $("pFiltro").innerHTML = filtroChips(); renderPrecios(); });
   $("pBuscar").addEventListener("input", renderPrecios);
@@ -925,7 +931,7 @@ import { firebaseConfig } from "./firebase-config.js";
   }
   const thumb = (img) => img ? `<img src="${img}" alt="">` : "";
   S.fotos = new Map(); S.nFoto = null;
-  function limpiarNFoto() { S.nFoto = null; $("nFoto").value = ""; $("nFotoPrev").innerHTML = ""; $("nFotoTxt").textContent = "Agregar foto"; $("nWeb").checked = false; $("nFotoRow").hidden = true; }
+  function limpiarNFoto() { S.nFoto = null; $("nFoto").value = ""; $("nFotoPrev").innerHTML = ""; $("nFotoTxt").textContent = "Agregar foto"; $("nWeb").checked = true; $("nFotoRow").hidden = false; }
   $("nWeb").addEventListener("change", () => { $("nFotoRow").hidden = !$("nWeb").checked; });
   $("nFoto").addEventListener("change", async e => { const f = e.target.files && e.target.files[0]; if (!f) return;
     try { S.nFoto = await achicarFoto(f); $("nFotoPrev").innerHTML = thumb(S.nFoto); $("nFotoTxt").textContent = "Cambiar foto"; } catch (er) { toast("No se pudo leer esa foto. Probá con otra."); } });
@@ -936,6 +942,15 @@ import { firebaseConfig } from "./firebase-config.js";
     try { const img = await DB.leerFoto(id); if (img) { S.fotos.set(id, img); if (S.editing === id && $("eFotoPrev")) $("eFotoPrev").innerHTML = thumb(img); } } catch (e) {} }
   $("plist").addEventListener("change", async e => {
     if (e.target.id === "eW") { $("eWebBox").hidden = !e.target.checked; return; }
+    if (e.target.dataset.qfoto) { // foto rápida desde la lista: la guarda y deja el producto en la tienda
+      const id = e.target.dataset.qfoto, f = e.target.files && e.target.files[0], lbl = e.target.closest("label"); if (!f) return;
+      if (!S.ready) { toast("Sin conexión con el registro"); return; }
+      lbl.classList.add("subiendo");
+      try { const img = await achicarFoto(f); const ts = Date.now();
+        DB.ponerFoto(id, img, ts); DB.updateProd(id, { foto: ts, web: true }); S.fotos.set(id, img); S.prods.set(id, { ...S.prods.get(id), foto: ts, web: true });
+        toast("Foto guardada: " + (S.prods.get(id).n || "")); render(true); }
+      catch (er) { lbl.classList.remove("subiendo"); toast("No se pudo leer esa foto. Probá con otra."); }
+      return; }
     if (e.target.id !== "eFoto" || !S.editing || !S.ready) return;
     const id = S.editing, f = e.target.files && e.target.files[0]; if (!f) return;
     try { const img = await achicarFoto(f); const ts = Date.now();
@@ -955,9 +970,21 @@ import { firebaseConfig } from "./firebase-config.js";
   function renderTienda() {
     const n = prodList().filter(p => p.web && !p.vendida).length, sinFoto = prodList().filter(p => p.web && !p.vendida && !p.foto).length;
     $("tInfo").textContent = !S.tienda.whatsapp ? "Falta el WhatsApp donde llegan los pedidos: cargalo en Datos de la tienda." :
-      !n ? "Todavía no hay productos en la tienda. Tocá Editar en un producto y marcá Mostrar en la tienda web." :
-      `${n} producto${n === 1 ? "" : "s"} en la tienda` + (sinFoto ? ` (${sinFoto} sin foto).` : ".");
+      !n ? "Todavía no hay productos en la tienda." :
+      `${n} producto${n === 1 ? "" : "s"} en la tienda` + (sinFoto ? ` (${sinFoto} sin foto: tocá la cámara en la lista para sacarles una).` : ".");
+    const faltan = fueraDeTienda().length; $("tTodos").hidden = !faltan || !$("tTodosOk").hidden;
+    $("tTodos").textContent = `Poner ${faltan === 1 ? "el producto que falta" : `los ${faltan} productos que faltan`} en la tienda`;
   }
+  const fueraDeTienda = () => prodList().filter(p => !p.vendida && !p.web);
+  $("tTodos").addEventListener("click", () => { const n = fueraDeTienda().length; if (!n) return; $("tTodos").hidden = true; $("tTodosOk").hidden = false;
+    $("tTodosOk").innerHTML = `¿Mostrar ${n} producto${n === 1 ? "" : "s"} más en la tienda? Después podés sacar cualquiera desde Editar. <button type="button" class="btn dark small" id="tTodosSi">Sí, ponerlos</button><button type="button" class="btn soft small" id="tTodosNo">Cancelar</button>`; });
+  $("tTodosOk").addEventListener("click", async e => { if (e.target.id === "tTodosNo") { $("tTodosOk").hidden = true; renderTienda(); return; } if (e.target.id !== "tTodosSi") return;
+    if (!S.ready) { toast("Sin conexión con el registro"); return; }
+    const list = fueraDeTienda(); e.target.disabled = true; let ok = 0;
+    try { for (let i = 0; i < list.length; i += 8) await Promise.all(list.slice(i, i + 8).map(p => DB.updateProd(p.id, { web: true }).then(() => { S.prods.set(p.id, { ...S.prods.get(p.id), web: true }); ok++; })));
+      toast(`Listo: ${ok} productos en la tienda`); }
+    catch (err) { toast(`Se pusieron ${ok} de ${list.length}. ${errMsg(err)}`); }
+    $("tTodosOk").hidden = true; render(true); });
   let tAbierto = false;
   function llenarTienda() { renderPromo(); if ($("tForm").contains(document.activeElement)) { renderTienda(); return; } $("tWa").value = S.tienda.whatsapp ? "+" + S.tienda.whatsapp : ""; $("tIg").value = S.tienda.instagram || ""; $("tRet").value = S.tienda.retiro || "";
     if (!S.tienda.whatsapp && !tAbierto) { $("tAjustes").open = true; tAbierto = true; } renderTienda(); }
@@ -987,12 +1014,13 @@ import { firebaseConfig } from "./firebase-config.js";
   function tagsDe(p) { const c = p.cat || "Otro"; let t = `<span class="tag ${esc(c)}">${esc(CL[c] || "Otro")}</span>`;
     if (p.unica) t += `<span class="tag gris">Pieza única</span>`; if (p.vendida) t += `<span class="tag warn">Vendida</span>`;
     if (p.web && !p.vendida) t += `<span class="tag web">En la web</span>` + (p.foto ? "" : `<span class="tag gris">Sin foto</span>`); return t; }
+  const CAMARA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>';
   function renderPrecios() {
-    const q = norm($("pBuscar").value); const list = prodList().filter(p => (S.pFiltro === "Todos" || (p.cat || "Otro") === S.pFiltro) && (!q || norm(p.n).includes(q)))
+    const q = norm($("pBuscar").value); const list = prodList().filter(p => (S.pFiltro === "Todos" || (S.pFiltro === "SinFoto" ? !p.foto && !p.vendida : (p.cat || "Otro") === S.pFiltro)) && (!q || norm(p.n).includes(q)))
       .sort((a, b) => (a.vendida ? 1 : 0) - (b.vendida ? 1 : 0));
     const activos = prodList().filter(p => !p.vendida).length; $("pCount").textContent = `${activos} producto${activos === 1 ? "" : "s"} en venta`;
-    if (!list.length) { $("plist").innerHTML = `<div class="empty"><strong>${S.prods.size ? "No hay productos con ese filtro" : "La lista está vacía"}</strong>${S.prods.size ? "Probá con otra búsqueda." : "Agregá los productos que más se venden y aparecen como botones en Vender. No hace falta cargar todo."}</div>`; return; }
-    $("plist").innerHTML = list.map(p => { let h = `<div class="prow${p.vendida ? " vendida" : ""}"><div><div class="n">${esc(p.n)}</div><div class="tags">${tagsDe(p)}</div></div>${p.p > 0 ? `<b class="p num">${money(p.p)}</b>` : `<span class="hint">Precio a elegir</span>`}<button type="button" class="btn soft small" data-edit="${p.id}">Editar</button>`;
+    if (!list.length) { $("plist").innerHTML = `<div class="empty"><strong>${!S.prods.size ? "La lista está vacía" : S.pFiltro === "SinFoto" && !q ? "Todos tienen foto" : "No hay productos con ese filtro"}</strong>${S.prods.size ? (S.pFiltro === "SinFoto" && !q ? "¡Bien ahí!" : "Probá con otra búsqueda.") : "Agregá los productos que más se venden y aparecen como botones en Vender. No hace falta cargar todo."}</div>`; return; }
+    $("plist").innerHTML = list.map(p => { let h = `<div class="prow${p.vendida ? " vendida" : ""}"><div><div class="n">${esc(p.n)}</div><div class="tags">${tagsDe(p)}</div></div>${p.p > 0 ? `<b class="p num">${money(p.p)}</b>` : `<span class="hint">Precio a elegir</span>`}${p.vendida ? "<span></span>" : `<label class="btn soft small filebtn qfoto${p.foto ? " tiene" : ""}" title="${p.foto ? "Cambiar foto" : "Sacar foto"}" aria-label="${p.foto ? "Cambiar foto de " : "Sacar foto a "}${esc(p.n)}">${CAMARA}<input type="file" accept="image/*" data-qfoto="${p.id}" class="vh"></label>`}<button type="button" class="btn soft small" data-edit="${p.id}">Editar</button>`;
       if (S.editing === p.id) { const ec = p.cat || "Otro";
         h += `<div class="pedit"><div class="row"><div class="field grow"><label for="eN">Nombre</label><input type="text" id="eN" value="${esc(p.n)}"></div><div class="field" style="width:150px"><label for="eP">Precio ($)</label><input type="text" id="eP" inputmode="decimal" class="num" value="${p.p > 0 ? plain(p.p) : ""}" placeholder="Variable"></div></div>
         <div class="field"><span class="flabel">Tipo</span><div class="chips" id="eCats">${catChips(ec, "data-ecat")}</div></div>
