@@ -48,3 +48,16 @@ App de caja y tienda web del vivero **Árboles · Espacio Botánico** (Río Cuar
 - `config/semilla`: marca de que ya se cargaron las plantas iniciales
 - `cuentas/{id}`: en desuso (antes guardaba cuando se pasaban la plata)
 - `usuarios/{uid}`: `{ nombre: "Fran"|"Rocío", email }`
+
+## Pendientes (al 14/11/2026)
+- **Dominio propio `arbolesr4.com.ar`:** estaba disponible en NIC Argentina; Balta lo estaba registrando a nombre de Fran (CUIT de Fran, clave fiscal). Preguntar si ya quedó pago y acreditado. Plan acordado, en este orden:
+  1. Cloudflare gratis: agregar el dominio, plan Free; poner sus dos servidores de nombres en NIC → Delegar.
+  2. En Cloudflare → DNS, con la nube gris ("Solo DNS"): cuatro registros A `@` → `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`, y CNAME `www` → `cornabalta3-web.github.io`.
+  3. GitHub → repo → Settings → Pages → Custom domain `arbolesr4.com.ar` → Save, y después "Enforce HTTPS".
+  4. Firebase → Authentication → Configuración → Dominios autorizados → agregar `arbolesr4.com.ar` (si no, el login de la caja falla).
+  5. Recién ahí reorganizar el repo: la **tienda pasa a la raíz** (`arbolesr4.com.ar`) y la **caja a `/caja/`** (ajustar rutas relativas, manifest, `sw.js` y su alcance, `og:url`/`og:image`). Mostrar un botón "Ir a la caja" en la tienda solo si ese navegador ya usó la caja (`caja.yo` en localStorage), nunca a clientes.
+  6. Avisar que Fran y Ro tienen que entrar con Google una vez más en la caja nueva y volver a agregarla a la pantalla de inicio (cambia el origen: se pierden la sesión y el localStorage, no los datos de Firebase). El link viejo de github.io redirige solo.
+- **Reglas de Firestore:** confirmar con Balta que publicó las de `firestore.rules` (sin eso la tienda dice "No se pudo cargar").
+- **`qr.png`:** falta la foto del QR fijo de Mercado Pago (Kit QR) para "Mostrar QR al cliente".
+- **Productos en la tienda:** Fran y Ro todavía tienen que marcar "Mostrar en la tienda web", sacar fotos y cargar el WhatsApp en Datos de la tienda.
+- Tiendanube quedó descartado por ahora (duplicaría la carga de productos); se habló como opción solo si algún día quieren cobro con tarjeta online.
